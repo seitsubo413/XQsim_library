@@ -11,6 +11,11 @@ XQsim Patch Trace Backend (Interface Layer)
 - XQsim本体の処理/ロジックは変更しません。
 - 本ファイルは観測・整形（I/O）のみを行います。
 
+運用上の注意:
+- sys.exitのインターセプトはプロセス全体に影響する
+- 並列実行は危険なため、api_server.py側で直列化すること
+- uvicorn --workers 1 での運用を推奨
+
 返すもの:
 - input_qasm
 - clifford_t_qasm (2A)
@@ -24,22 +29,71 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import logging
 import os
 import sys
+import threading
+import time
 import types
 import uuid
-from dataclasses import dataclass
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 
+logger = logging.getLogger("xqsim.trace")
+
 EVENT_INSTS = {"PREP_INFO", "MERGE_INFO", "SPLIT_INFO"}
+
+# スレッドローカルストレージでsys.exit差し替えを管理
+# 注意: これは完全なスレッドセーフではない。api_server.py側で直列化すること
+_exit_intercept_lock = threading.Lock()
+
+
+# ============================================================================
+# numpy安全インポート
+# ============================================================================
+_numpy_available = False
+try:
+    import numpy as np
+    _numpy_available = True
+except ImportError:
+    np = None  # type: ignore
+
+
+@dataclass
+class TraceMetadata:
+    """トレース実行のメタ情報を保持"""
+    forced_terminations: List[Dict[str, Any]] = field(default_factory=list)
+    cleanup_failed: bool = False
+    cleanup_errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    stability_check_failures: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class PatchSnapshot:
     """A full snapshot of all patches, used to compute deltas."""
-
     patches: List[Dict[str, Any]]  # index aligned by pchidx
+
+
+def _get_artifact_root() -> str:
+    """
+    生成ファイルのルートディレクトリを取得。
+    
+    重要: gsc_compilerは内部的に src/quantum_circuits/ を参照するため、
+    このパスはコンパイラと一致させる必要がある。
+    """
+    curr_path = os.path.abspath(__file__)
+    src_dir = os.path.dirname(curr_path)
+    qc_dir = os.path.join(src_dir, "quantum_circuits")
+    
+    # サブディレクトリが存在することを確認
+    for subdir in ["open_qasm", "transpiled", "qisa_compiled", "binary"]:
+        subdir_path = os.path.join(qc_dir, subdir)
+        os.makedirs(subdir_path, exist_ok=True)
+    
+    return qc_dir
 
 
 def _make_job_name(num_qasm_qubits: int) -> str:
@@ -51,9 +105,7 @@ def _make_job_name(num_qasm_qubits: int) -> str:
 
 
 def _qc_paths(job_name: str) -> Tuple[str, str, str, str]:
-    curr_path = os.path.abspath(__file__)
-    src_dir = os.path.dirname(curr_path)
-    qc_dir = os.path.join(src_dir, "quantum_circuits")
+    qc_dir = _get_artifact_root()
     qasm_path = os.path.join(qc_dir, "open_qasm", f"{job_name}.qasm")
     qtrp_path = os.path.join(qc_dir, "transpiled", f"{job_name}.qtrp")
     qisa_path = os.path.join(qc_dir, "qisa_compiled", f"{job_name}.qisa")
@@ -66,6 +118,48 @@ def _ensure_parent_dir(path: str) -> None:
     os.makedirs(parent, exist_ok=True)
 
 
+def _to_json_safe(value: Any) -> Any:
+    """
+    任意の値をJSONシリアライズ可能な型に正規化する。
+    numpy型、bytes、Enumなどを適切に変換。
+    numpyが利用不可の場合はスキップ。
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float, str)):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    
+    # numpy型の処理（numpyが利用可能な場合のみ）
+    if _numpy_available and np is not None:
+        if isinstance(value, np.integer):
+            return int(value)
+        if isinstance(value, np.floating):
+            return float(value)
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, np.bool_):
+            return bool(value)
+    
+    # Enum処理
+    if hasattr(value, "value"):
+        return _to_json_safe(value.value)
+    if hasattr(value, "name") and hasattr(value, "__class__"):
+        return str(value.name)
+    
+    # コンテナ型
+    if isinstance(value, dict):
+        return {_to_json_safe(k): _to_json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_to_json_safe(v) for v in value]
+    
+    # フォールバック: 文字列化
+    return str(value)
+
+
 def _format_facebd(facebd_list: List[str]) -> Dict[str, str]:
     """
     Existing code uses order: (w, n, e, s)
@@ -74,7 +168,12 @@ def _format_facebd(facebd_list: List[str]) -> Dict[str, str]:
     if len(facebd_list) != 4:
         return {"w": "", "n": "", "e": "", "s": ""}
     w, n, e, s = facebd_list
-    return {"w": w, "n": n, "e": e, "s": s}
+    return {
+        "w": _to_json_safe(w),
+        "n": _to_json_safe(n),
+        "e": _to_json_safe(e),
+        "s": _to_json_safe(s),
+    }
 
 
 def _format_cornerbd(cornerbd_list: List[str]) -> Dict[str, str]:
@@ -85,7 +184,12 @@ def _format_cornerbd(cornerbd_list: List[str]) -> Dict[str, str]:
     if len(cornerbd_list) != 4:
         return {"nw": "", "ne": "", "sw": "", "se": ""}
     nw, ne, sw, se = cornerbd_list
-    return {"nw": nw, "ne": ne, "sw": sw, "se": se}
+    return {
+        "nw": _to_json_safe(nw),
+        "ne": _to_json_safe(ne),
+        "sw": _to_json_safe(sw),
+        "se": _to_json_safe(se),
+    }
 
 
 def _take_full_patch_snapshot(sim: Any) -> PatchSnapshot:
@@ -102,7 +206,7 @@ def _take_full_patch_snapshot(sim: Any) -> PatchSnapshot:
 
         # static
         pchstat = piu.pchinfo_static_ram[pchidx]
-        pchtype = pchstat.get("pchtype")
+        pchtype = _to_json_safe(pchstat.get("pchtype"))
 
         # dynamic boundary
         facebd = piu.facebd_ram[pchidx]
@@ -160,6 +264,163 @@ def _opcode_to_inst_name(param: Any, opcode_bits: Optional[str]) -> Optional[str
     return mapping.get(opcode_bits)
 
 
+def _get_unit_states(sim: Any) -> Dict[str, Any]:
+    """シミュレータの各ユニットの状態を取得（デバッグ/メタ情報用）"""
+    return {
+        "qif_done": _to_json_safe(getattr(sim.qif, "done", None)),
+        "qif_all_fetched": _to_json_safe(getattr(sim.qif, "all_fetched", None)),
+        "qid_done": _to_json_safe(getattr(sim.qid, "done", None)),
+        "pdu_state": _to_json_safe(getattr(sim.pdu, "state", None)),
+        "piu_state": _to_json_safe(getattr(sim.piu, "state", None)),
+        "psu_state": _to_json_safe(getattr(sim.psu, "state", None)),
+        "tcu_timebuf_empty": _to_json_safe(getattr(sim.tcu, "output_timebuf_empty", None)),
+        "pfu_state": _to_json_safe(getattr(sim.pfu, "state", None)),
+        "lmu_done": _to_json_safe(getattr(sim.lmu, "done", None)),
+    }
+
+
+def _safe_getattr(obj: Any, attr: str, default: Any = None) -> Tuple[Any, bool]:
+    """
+    安全に属性を取得し、取得できたかどうかも返す。
+    
+    Returns:
+        (value, success): 値と取得成功フラグのタプル
+    """
+    try:
+        if not hasattr(obj, attr):
+            return default, False
+        value = getattr(obj, attr)
+        # callableの場合は呼び出さない（propertyかどうか判定が難しいため）
+        return value, True
+    except Exception:
+        return default, False
+
+
+def _check_system_stable(sim: Any, trace_meta: TraceMetadata) -> bool:
+    """
+    システム全体が安定状態かどうかを判定。
+    
+    重要:
+    - 観測不能な条件はFalse（安定扱いにしない）
+    - どの条件が評価不能だったかを記録
+    - これは「停止して良いかの追加確認」であり、最終的にはmax_cyclesで保険
+    
+    Returns:
+        True if system appears stable, False otherwise
+    """
+    conditions: Dict[str, Tuple[bool, bool]] = {}  # name -> (value, observable)
+    
+    # QIF: 全命令フェッチ済み
+    qif_all_fetched, qif_obs = _safe_getattr(sim.qif, "all_fetched", False)
+    conditions["qif_all_fetched"] = (bool(qif_all_fetched), qif_obs)
+    
+    # QID: バッファが空
+    to_pchdec_buf, pchdec_obs = _safe_getattr(sim.qid, "to_pchdec_buf", None)
+    if pchdec_obs and to_pchdec_buf is not None:
+        pchdec_empty, pchdec_empty_obs = _safe_getattr(to_pchdec_buf, "empty", False)
+        conditions["qid_pchdec_empty"] = (bool(pchdec_empty), pchdec_empty_obs)
+    else:
+        conditions["qid_pchdec_empty"] = (False, False)
+    
+    to_lqmeas_buf, lqmeas_obs = _safe_getattr(sim.qid, "to_lqmeas_buf", None)
+    if lqmeas_obs and to_lqmeas_buf is not None:
+        lqmeas_empty, lqmeas_empty_obs = _safe_getattr(to_lqmeas_buf, "empty", False)
+        conditions["qid_lqmeas_empty"] = (bool(lqmeas_empty), lqmeas_empty_obs)
+    else:
+        conditions["qid_lqmeas_empty"] = (False, False)
+    
+    # PDU: 空状態
+    pdu_state, pdu_obs = _safe_getattr(sim.pdu, "state", None)
+    conditions["pdu_empty"] = (pdu_state == "empty", pdu_obs)
+    
+    # PIU: ready状態
+    piu_state, piu_obs = _safe_getattr(sim.piu, "state", None)
+    conditions["piu_ready"] = (piu_state == "ready", piu_obs)
+    
+    piu_topsu_valid, topsu_obs = _safe_getattr(sim.piu, "output_topsu_valid", True)
+    conditions["piu_no_topsu_valid"] = (not bool(piu_topsu_valid), topsu_obs)
+    
+    piu_tolmu_valid, tolmu_obs = _safe_getattr(sim.piu, "output_tolmu_valid", True)
+    conditions["piu_no_tolmu_valid"] = (not bool(piu_tolmu_valid), tolmu_obs)
+    
+    # PSU: ready状態でバッファ空
+    psu_state, psu_state_obs = _safe_getattr(sim.psu, "state", None)
+    conditions["psu_ready"] = (psu_state == "ready", psu_state_obs)
+    
+    psu_srmem, srmem_obs = _safe_getattr(sim.psu, "pchinfo_srmem", None)
+    if srmem_obs and psu_srmem is not None:
+        srmem_notempty, notempty_obs = _safe_getattr(psu_srmem, "output_notempty", True)
+        conditions["psu_buf_empty"] = (not bool(srmem_notempty), notempty_obs)
+    else:
+        conditions["psu_buf_empty"] = (False, False)
+    
+    # TCU: タイムバッファ空
+    tcu_empty, tcu_obs = _safe_getattr(sim.tcu, "output_timebuf_empty", False)
+    conditions["tcu_empty"] = (bool(tcu_empty), tcu_obs)
+    
+    # PFU: ready状態
+    pfu_state, pfu_obs = _safe_getattr(sim.pfu, "state", None)
+    conditions["pfu_ready"] = (pfu_state == "ready", pfu_obs)
+    
+    # LMU: instinfo_validがFalse
+    lmu_instinfo_valid, lmu_obs = _safe_getattr(sim.lmu, "instinfo_valid", True)
+    conditions["lmu_no_instinfo_valid"] = (not bool(lmu_instinfo_valid), lmu_obs)
+    
+    # LMU: done状態
+    lmu_done, lmu_done_obs = _safe_getattr(sim.lmu, "done", False)
+    conditions["lmu_done"] = (bool(lmu_done), lmu_done_obs)
+    
+    # QXU: 測定メモリが空
+    qxu_dq_meas_mem, qxu_dq_obs = _safe_getattr(sim.qxu, "dq_meas_mem", None)
+    qxu_aq_meas_mem, qxu_aq_obs = _safe_getattr(sim.qxu, "aq_meas_mem", None)
+    qxu_empty = not (bool(qxu_dq_meas_mem) or bool(qxu_aq_meas_mem))
+    qxu_obs = qxu_dq_obs and qxu_aq_obs
+    conditions["qxu_meas_mem_empty"] = (qxu_empty, qxu_obs)
+    
+    # 観測不能な条件を記録
+    unobservable = {k: v for k, (val, obs) in conditions.items() if not obs}
+    if unobservable:
+        trace_meta.stability_check_failures.append({
+            "cycle": sim.cycle,
+            "unobservable_conditions": list(unobservable.keys()),
+        })
+    
+    # 全条件がTrue、かつ全条件が観測可能な場合のみTrue
+    all_true = all(val for val, _ in conditions.values())
+    all_observable = all(obs for _, obs in conditions.values())
+    
+    return all_true and all_observable
+
+
+@contextmanager
+def _intercept_sys_exit():
+    """
+    sys.exitを一時的にインターセプトするコンテキストマネージャー。
+    
+    警告: このパターンは並行実行環境では危険。
+    api_server.py側で直列化すること。
+    """
+    original_exit = sys.exit
+    exit_info = {"called": False, "code": None}
+    
+    def _intercepted_exit(code=None):
+        exit_info["called"] = True
+        exit_info["code"] = code
+        error_msg = (
+            "XQsim simulation error: sys.exit() was called by the simulator. "
+            "This typically occurs when there is an invalid patch Pauli product (pchpp) configuration. "
+            f"Exit code: {code}"
+        )
+        raise RuntimeError(error_msg)
+    
+    with _exit_intercept_lock:
+        try:
+            sys.exit = _intercepted_exit
+            yield exit_info
+        finally:
+            sys.exit = original_exit
+
+
 def trace_patches_from_qasm(
     qasm_str: str,
     *,
@@ -167,14 +428,33 @@ def trace_patches_from_qasm(
     skip_pqsim: bool = True,
     num_shots: int = 1,
     keep_artifacts: bool = False,
+    debug_logging: bool = False,
+    max_cycles: int = 10_000_000,
+    timeout_seconds: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Main entry: QASM文字列を入力として、既存XQsimを用いてパッチ時系列(JSON)を返す。
 
-    keep_artifacts:
-      Falseなら生成した open_qasm/transpiled/qisa_compiled/binary のファイルを削除する。
-      Trueならデバッグのため残す。
+    Args:
+        qasm_str: OpenQASM 2.0形式の量子回路
+        config_name: 設定ファイル名（src/configs配下、.jsonなし）
+        skip_pqsim: 物理量子ビットシミュレーションをスキップするか
+        num_shots: シミュレーションのショット数
+        keep_artifacts: 生成ファイルを残すか
+        debug_logging: 詳細デバッグログを有効にするか
+        max_cycles: 最大サイクル数（無限ループ防止）
+        timeout_seconds: wall clockタイムアウト（秒）。Noneの場合はチェックしない
+    
+    Returns:
+        パッチトレースを含むJSON形式の辞書
+    
+    Raises:
+        TimeoutError: タイムアウトした場合
+        RuntimeError: シミュレーションエラーの場合
     """
+    start_time = time.time()
+    trace_meta = TraceMetadata()
+    
     # --- Path bootstrap (match XQsim style; do not modify core modules) ---
     curr_path = os.path.abspath(__file__)
     src_dir = os.path.dirname(curr_path)
@@ -186,35 +466,6 @@ def trace_patches_from_qasm(
         sys.path.insert(0, comp_dir)
     if src_dir not in sys.path:
         sys.path.insert(0, src_dir)
-
-    # --- Ray safety knobs (interface-layer only) ---
-    # XQsim imports Ray in simulator modules. Ray can auto-init on first use and attempt to
-    # start the dashboard, which may crash under pydantic v2 (FastAPI dependency).
-    # We disable the dashboard via env vars before importing XQsim modules.
-    os.environ.setdefault("RAY_DISABLE_DASHBOARD", "1")
-    os.environ.setdefault("RAY_DASHBOARD_ENABLED", "0")
-    os.environ.setdefault("RAY_USAGE_STATS_ENABLED", "0")
-
-    # NOTE (important for /trace):
-    # Even when skip_pqsim=True, XQ-simulator's QXU path constructs Ray actors
-    # (e.g., qc_supervisor.remote(...)), which triggers Ray auto-init.
-    # To avoid flaky auto-init defaults in containers, we explicitly init Ray here
-    # with dashboard disabled and a stable plasma directory.
-    ray = importlib.import_module(
-        "ray"
-    )  # importing is safe; it doesn't start the cluster
-    if not ray.is_initialized():
-        ray.init(
-            ignore_reinit_error=True,
-            include_dashboard=False,
-            log_to_driver=False,
-            num_cpus=1,
-            # Keep object store small/stable for API use. Ray accepts bytes.
-            object_store_memory=512 * 1024 * 1024,
-            # Use shared memory inside the container to avoid slow /tmp fallback when possible.
-            _plasma_directory="/dev/shm",
-            _temp_dir="/tmp/ray",
-        )
 
     # Import existing modules after sys.path bootstrap (no modification to their code)
     QuantumCircuit = importlib.import_module("qiskit").QuantumCircuit  # type: ignore
@@ -230,23 +481,31 @@ def trace_patches_from_qasm(
     num_qasm_qubits = int(qc_in.num_qubits)
 
     # XQsim simulator (PIU) requires num_lq to be odd.
-    # The existing compiler derives its internal num_lq as (num_qasm_qubits + 2).
-    # Therefore, to keep compiler and simulator consistent without modifying XQsim core,
-    # we pad the compilation QASM to an odd number of qubits when needed.
-    #
-    # - input: 2 qubits  -> compile with 3 qubits -> compiler num_lq=5 (odd) -> simulator num_lq=5
-    # - input: 1 qubit  -> compile with 1 qubits -> compiler num_lq=3 (odd) -> simulator num_lq=3
     num_compile_qubits = num_qasm_qubits if (num_qasm_qubits % 2 == 1) else (num_qasm_qubits + 1)
-    if num_compile_qubits != num_qasm_qubits:
+    padding_applied = num_compile_qubits != num_qasm_qubits
+    
+    if padding_applied:
         qc_compile = QuantumCircuit(num_compile_qubits, qc_in.num_clbits)
         qc_compile.compose(qc_in, qubits=list(range(num_qasm_qubits)), inplace=True)
         qasm_for_compile = qc_compile.qasm()
+        trace_meta.warnings.append(
+            f"Padding applied: original {num_qasm_qubits} qubits -> {num_compile_qubits} qubits for compilation. "
+            f"The last qubit (index {num_compile_qubits - 1}) is unused."
+        )
     else:
+        qc_compile = qc_in
         qasm_for_compile = qasm_str
 
     # 2) Produce "2A" Clifford+T circuit (reuse existing function)
     qc_clifford_t = decompose_qc_to_Clifford_T_fn(qc_in)
     clifford_t_qasm = qc_clifford_t.qasm()
+    
+    # パディング後のClifford+Tも生成
+    if padding_applied:
+        qc_clifford_t_padded = decompose_qc_to_Clifford_T_fn(qc_compile)
+        clifford_t_qasm_padded = qc_clifford_t_padded.qasm()
+    else:
+        clifford_t_qasm_padded = clifford_t_qasm
 
     # 3) Generate file-based artifacts using existing compiler pipeline
     job_name = _make_job_name(num_compile_qubits)
@@ -265,10 +524,8 @@ def trace_patches_from_qasm(
     with open(qisa_path, "r", encoding="utf-8") as f:
         qisa_lines = [line.rstrip("\n") for line in f.readlines() if line.strip()]
 
-    # 4) Run simulator cycle-by-cycle (reuse existing run_cycle_* methods) and observe PIU
+    # 4) Run simulator cycle-by-cycle and observe PIU
     sim = xq_simulator_cls()
-    # IMPORTANT: Keep simulator's num_lq consistent with the compiler output.
-    # The existing compiler uses: num_lq = (num_compile_qubits + 2).
     num_lq = int(num_compile_qubits + 2)
     sim.setup(
         config=config_name,
@@ -281,112 +538,88 @@ def trace_patches_from_qasm(
         debug=False,
     )
 
-    # NOTE: xq_simulator references self.emulate in run_cycle_update/run().
-    # This repo version doesn't set it in setup, so we set it here without modifying core code.
-    # For our "shape-only" trace, emulate == skip_pqsim is consistent with QXU's emulate_mode.
+    # emulate属性の設定
     if not hasattr(sim, "emulate"):
         setattr(sim, "emulate", bool(skip_pqsim))
 
-    # --- Interface-layer workaround: ensure simulator termination can be observed ---
-    #
-    # We observed cases where /trace never finishes because qif.done/qid.done remain False,
-    # even after all instructions have been fetched/consumed. This stalls xq_simulator's
-    # done_cond (run_cycle_tick) forever and the API request hangs.
-    #
-    # Per user request: do NOT modify XQsim core logic. Instead, we patch the QIF instance
-    # method at runtime to set `done=True` when "all fetched" AND "buffer empty".
-    # This only affects this API process and only for trace runs.
+    # --- Interface-layer workaround: ensure simulator termination ---
     _orig_qif_transfer = sim.qif.transfer
-
+    _orig_lmu_transfer = sim.lmu.transfer
+    
     def _qif_transfer_with_done_fix(self: Any) -> None:
         _orig_qif_transfer()
         try:
-            # Match original XQsim condition (quantum_instruction_fetch.py lines 85-86):
-            # "done" means: all instructions fetched AND buffer still has content (being consumed).
-            # Original: if self.all_fetched and not self.output_instbuf_empty: self.done = True
-            if bool(getattr(self, "all_fetched", False)) and not bool(
-                getattr(self, "output_instbuf_empty", True)
-            ):
-                setattr(self, "done", True)
-        except Exception:
-            # Best-effort: never crash the sim due to an interface-layer hook.
-            pass
-
-    sim.qif.transfer = types.MethodType(_qif_transfer_with_done_fix, sim.qif)
-
-    # Interface-layer workaround: LMU may not set done=True in some cases.
-    # Similar to QIF, we patch LMU's transfer method to set done=True when appropriate.
-    _orig_lmu_transfer = sim.lmu.transfer
+            qif_all_fetched, obs = _safe_getattr(self, "all_fetched", False)
+            if obs and bool(qif_all_fetched):
+                if _check_system_stable(sim, trace_meta):
+                    if not getattr(self, "done", False):
+                        trace_meta.forced_terminations.append({
+                            "unit": "qif",
+                            "cycle": sim.cycle,
+                            "reason": "system_stable",
+                            "states": _get_unit_states(sim),
+                        })
+                    setattr(self, "done", True)
+        except Exception as e:
+            logger.debug(f"QIF done fix error: {e}")
 
     def _lmu_transfer_with_done_fix(self: Any) -> None:
         _orig_lmu_transfer()
         try:
-            # LMU should be done when state is 'ready' and no more instructions are valid
-            # The original code sets done=True when state=='ready' and not instinfo_valid
-            # But sometimes instinfo_valid may remain True even when there's no more work
-            # We check if all inputs are empty/ready and state is ready
-            state = getattr(self, "state", None)
-            instinfo_valid = bool(getattr(self, "instinfo_valid", True))
-            input_lqmeasbuf_empty = bool(getattr(self, "input_lqmeasbuf_empty", False))
-            
-            # If state is ready and input buffer is empty, consider LMU done
-            # This is a more aggressive condition to prevent infinite loops
-            if state == "ready":
-                if not instinfo_valid:
-                    # Original condition: state=='ready' and not instinfo_valid
-                    setattr(self, "done", True)
-                elif input_lqmeasbuf_empty:
-                    # Additional condition: if input buffer is empty and state is ready,
-                    # and we've been running for a while, consider it done
-                    # This helps prevent infinite loops in interface layer
-                    setattr(self, "done", True)
-        except Exception:
-            # Best-effort: never crash the sim due to an interface-layer hook.
-            pass
+            state, obs = _safe_getattr(self, "state", None)
+            if obs and state == "ready" and _check_system_stable(sim, trace_meta):
+                if not getattr(self, "done", False):
+                    trace_meta.forced_terminations.append({
+                        "unit": "lmu",
+                        "cycle": sim.cycle,
+                        "reason": "system_stable",
+                        "states": _get_unit_states(sim),
+                    })
+                setattr(self, "done", True)
+        except Exception as e:
+            logger.debug(f"LMU done fix error: {e}")
 
+    sim.qif.transfer = types.MethodType(_qif_transfer_with_done_fix, sim.qif)
     sim.lmu.transfer = types.MethodType(_lmu_transfer_with_done_fix, sim.lmu)
-
-    # Ray was pre-initialized above (dashboard disabled) to avoid container crashes.
 
     patch_initial = _take_full_patch_snapshot(sim)
     prev_snapshot = patch_initial
 
     events: List[Dict[str, Any]] = []
-    accepted_inst_count = (
-        0  # qisa_idx, aligned by PIU acceptance (take_input && !stall)
-    )
+    accepted_inst_count = 0
 
-    # Interface-layer workaround: catch SystemExit from existing XQsim code
-    # Existing code calls sys.exit() on errors, which would kill the API server.
-    # We catch it and convert to a proper exception.
-    original_exit = sys.exit
-    sys_exit_called = False
-    sys_exit_code = None
+    # デバッグログの間隔
+    debug_log_interval = int(os.environ.get("XQSIM_DEBUG_LOG_INTERVAL", "1000"))
+    
+    # タイムアウトチェック間隔（サイクル）
+    timeout_check_interval = 100
 
-    def _intercept_sys_exit(code=None):
-        nonlocal sys_exit_called, sys_exit_code
-        sys_exit_called = True
-        sys_exit_code = code
-        # Don't actually exit; raise an exception instead
-        # Note: We can't easily capture the exact error message from PIU.dyndec
-        # because it's printed to stdout, but we know the common error pattern
-        error_msg = (
-            "XQsim simulation error: sys.exit() was called by the simulator. "
-            "This typically occurs when there is an invalid patch Pauli product (pchpp) configuration. "
-            "The error 'invalid pchpp in PIU.dyndec' indicates that both pchpp_even and pchpp_odd "
-            "are non-Identity ('I') values, which is not allowed. "
-            "Some QASM circuits may not be compatible with the current patch configuration. "
-            "Try using a different QASM circuit or check the patch configuration."
-        )
-        raise RuntimeError(error_msg)
+    termination_reason = "normal"
 
-    try:
-        sys.exit = _intercept_sys_exit
-
+    with _intercept_sys_exit() as exit_info:
         while not sim.sim_done:
+            # タイムアウトチェック
+            if timeout_seconds is not None and sim.cycle % timeout_check_interval == 0:
+                elapsed = time.time() - start_time
+                if elapsed > timeout_seconds:
+                    termination_reason = "timeout"
+                    trace_meta.warnings.append(
+                        f"Trace timed out after {elapsed:.1f} seconds at cycle {sim.cycle}"
+                    )
+                    trace_meta.forced_terminations.append({
+                        "unit": "global",
+                        "cycle": sim.cycle,
+                        "reason": "timeout",
+                        "elapsed_seconds": elapsed,
+                        "states": _get_unit_states(sim),
+                    })
+                    raise TimeoutError(
+                        f"Trace operation timed out after {elapsed:.1f} seconds"
+                    )
+            
             sim.run_cycle_transfer()
 
-            # PIU acceptance moment (as agreed): take_input == True and input_stall == False
+            # PIU acceptance moment
             accepted = bool(sim.piu.take_input) and (not bool(sim.piu.input_stall))
             if accepted:
                 qisa_idx = accepted_inst_count
@@ -398,7 +631,6 @@ def trace_patches_from_qasm(
                     patch_delta = _diff_patch_snapshots(prev_snapshot, cur_snapshot)
                     prev_snapshot = cur_snapshot
 
-                    # emit event only if there is any delta (shape changed)
                     if patch_delta:
                         events.append(
                             {
@@ -413,85 +645,55 @@ def trace_patches_from_qasm(
             sim.run_cycle_update()
             sim.run_cycle_tick()
 
-            # Debug logging: detailed state every 1000 cycles
-            if sim.cycle % 1000 == 0:
-                print(f"\n=== Cycle {sim.cycle} Debug Info ===")
-                # QID state
-                qid = sim.qid
-                print(f"QID: all_decoded={getattr(qid, 'all_decoded', 'N/A')}, "
-                      f"to_pchdec_buf.empty={getattr(qid.to_pchdec_buf, 'empty', 'N/A')}, "
-                      f"to_lqmeas_buf.empty={getattr(qid.to_lqmeas_buf, 'empty', 'N/A')}, "
-                      f"input_qifdone={getattr(qid, 'input_qifdone', 'N/A')}")
-                # PDU state
-                pdu = sim.pdu
-                print(f"PDU: state={getattr(pdu, 'state', 'N/A')}, "
-                      f"next_state={getattr(pdu, 'next_state', 'N/A')}, "
-                      f"input_stall={getattr(pdu, 'input_stall', 'N/A')}, "
-                      f"output_valid={getattr(pdu, 'output_valid', 'N/A')}")
-                # PIU state
-                piu = sim.piu
-                print(f"PIU: state={getattr(piu, 'state', 'N/A')}, "
-                      f"next_state={getattr(piu, 'next_state', 'N/A')}, "
-                      f"input_stall={getattr(piu, 'input_stall', 'N/A')}, "
-                      f"take_input={getattr(piu, 'take_input', 'N/A')}, "
-                      f"output_topsu_valid={getattr(piu, 'output_topsu_valid', 'N/A')}, "
-                      f"output_tolmu_valid={getattr(piu, 'output_tolmu_valid', 'N/A')}")
-                # Downstream unit full status (causes stall)
-                psu = sim.psu
-                pfu = sim.pfu
-                lmu = sim.lmu
-                print(f"Downstream Full: psu.pchinfo_full={getattr(psu, 'pchinfo_full', 'N/A')}, "
-                      f"pfu.pchinfo_full={getattr(pfu, 'pchinfo_full', 'N/A')}, "
-                      f"lmu.pchinfo_full={getattr(lmu, 'pchinfo_full', 'N/A')}")
-                # PSU srmem state (to understand why psu.pchinfo_full stays True)
-                pchinfo_srmem = getattr(psu, 'pchinfo_srmem', None)
-                if pchinfo_srmem:
-                    print(f"PSU.srmem: input_pop={getattr(pchinfo_srmem, 'input_pop', 'N/A')}, "
-                          f"input_valid={getattr(pchinfo_srmem, 'input_valid', 'N/A')}")
-                    # Check double buffer state
-                    db = getattr(pchinfo_srmem, 'double_buffer', None)
-                    if db:
-                        print(f"PSU.srmem.double_buffer[0].state={getattr(db[0], 'state', 'N/A')}, "
-                              f"[1].state={getattr(db[1], 'state', 'N/A')}")
-                print(f"PSU: state={getattr(psu, 'state', 'N/A')}, "
-                      f"next_pch={getattr(psu, 'next_pch', 'N/A')}, "
-                      f"input_cwdgen_stall={getattr(psu, 'input_cwdgen_stall', 'N/A')}")
-                # Stall signals
-                print(f"Stalls: piu.input_stall={getattr(piu, 'input_stall', 'N/A')}, "
-                      f"pdu.input_stall={getattr(pdu, 'input_stall', 'N/A')}")
-                print(f"=== End Debug Info ===\n", flush=True)
+            # デバッグログ（オプション）
+            if debug_logging and sim.cycle % debug_log_interval == 0:
+                states = _get_unit_states(sim)
+                logger.info(f"Cycle {sim.cycle}: {states}")
+                print(f"Cycle {sim.cycle}: sim_done={sim.sim_done}", flush=True)
 
-            # Safety: if something goes wrong, avoid infinite loops (interface concern only)
-            # This check must be INSIDE the loop to actually prevent infinite loops.
-            if sim.cycle > 10_000_000:
-                raise RuntimeError("Simulation exceeded 10,000,000 cycles; aborting trace.")
-    except RuntimeError as e:
-        # Re-raise RuntimeError (including our intercepted sys.exit)
-        raise
-    finally:
-        # Restore original sys.exit
-        sys.exit = original_exit
+            # max_cycles保険
+            if sim.cycle > max_cycles:
+                termination_reason = "max_cycles"
+                trace_meta.warnings.append(
+                    f"Simulation exceeded {max_cycles} cycles; terminated early."
+                )
+                trace_meta.forced_terminations.append({
+                    "unit": "global",
+                    "cycle": sim.cycle,
+                    "reason": "max_cycles_exceeded",
+                    "states": _get_unit_states(sim),
+                })
+                break
 
     # 5) Build response JSON
+    elapsed_time = time.time() - start_time
     response: Dict[str, Any] = {
         "meta": {
-            "version": 1,
+            "version": 3,
             "config": config_name,
-            "block_type": sim.param.block_type,
+            "block_type": _to_json_safe(sim.param.block_type),
             "code_distance": int(sim.param.code_dist),
             "patch_grid": {
                 "rows": int(sim.param.num_pchrow),
                 "cols": int(sim.param.num_pchcol),
             },
             "num_patches": int(sim.param.num_pch),
+            "total_cycles": int(sim.cycle),
+            "elapsed_seconds": round(elapsed_time, 2),
+            "termination_reason": termination_reason,
+            "forced_terminations": trace_meta.forced_terminations,
+            "stability_check_failures": trace_meta.stability_check_failures[:10],  # 最大10件
+            "warnings": trace_meta.warnings,
         },
         "input": {
             "qasm": qasm_str,
             "num_qasm_qubits": num_qasm_qubits,
             "num_compile_qubits": int(num_compile_qubits),
+            "padding_applied": padding_applied,
         },
         "compiled": {
             "clifford_t_qasm": clifford_t_qasm,
+            "clifford_t_qasm_padded": clifford_t_qasm_padded if padding_applied else None,
             "qisa": qisa_lines,
             "qbin_name": job_name,
         },
@@ -508,9 +710,14 @@ def trace_patches_from_qasm(
                 os.remove(p)
             except FileNotFoundError:
                 pass
-            except Exception:
-                # keep best-effort cleanup; do not mask main result
-                pass
+            except Exception as e:
+                trace_meta.cleanup_failed = True
+                trace_meta.cleanup_errors.append(f"{p}: {e}")
+                logger.warning(f"Failed to cleanup {p}: {e}")
+        
+        if trace_meta.cleanup_failed:
+            response["meta"]["cleanup_failed"] = True
+            response["meta"]["cleanup_errors"] = trace_meta.cleanup_errors
 
     return response
 
@@ -531,9 +738,23 @@ def main() -> None:
         help="Keep generated qasm/qtrp/qisa/qbin files for debugging",
     )
     parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        help="Timeout in seconds",
+    )
+    parser.add_argument(
         "--out", default="-", help="Output JSON path, or '-' for stdout"
     )
     args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
 
     with open(args.qasm_file, "r", encoding="utf-8") as f:
         qasm_str = f.read()
@@ -543,9 +764,11 @@ def main() -> None:
         config_name=args.config,
         skip_pqsim=True,
         keep_artifacts=bool(args.keep_artifacts),
+        debug_logging=bool(args.debug),
+        timeout_seconds=args.timeout,
     )
 
-    out_json = json.dumps(res, ensure_ascii=False)
+    out_json = json.dumps(res, ensure_ascii=False, indent=2)
     if args.out == "-":
         print(out_json)
     else:

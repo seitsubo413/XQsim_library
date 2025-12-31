@@ -9,5 +9,6 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+      - XQSIM_TRACE_TIMEOUT_SECONDS=86400  # 24時間（実質無制限）
 
 

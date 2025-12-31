@@ -167,7 +167,7 @@ class xq_simulator:
         sim_time = round(timeit.default_timer()-start, 3)
         print("Simulation ends: {} sec".format(sim_time))
        
-        if not self.emulate:
+        if not self.skip_pqsim:
             self.lq_state_dist_list_x = self.qxu.lq_state_dist_list_x
             self.lq_state_dist_list_y = self.qxu.lq_state_dist_list_y
             self.lq_state_dist_list_z = self.qxu.lq_state_dist_list_z
@@ -353,7 +353,7 @@ class xq_simulator:
         return
 
     def run_cycle_update(self):
-        if not self.emulate:
+        if not self.skip_pqsim:
             self.qxu.save_current_logical_state()
             self.lmu.save_internal_value()
             self.pfu.save_internal_value()
