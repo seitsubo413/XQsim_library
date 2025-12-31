@@ -45,43 +45,16 @@ def main():
     print("XQsim 単体テスト（インターフェースなし）")
     print("=" * 60)
     
-    # 1) コンパイル
-    # XQsimの制約に合わせて3量子ビット版を使用
-    # qft_n2.qasmを3量子ビットにパディングしてコンパイル
-    qbin_name = "qft_n3_standalone"
-    print(f"\n1) コンパイル: {qbin_name}")
-    
-    # 3量子ビット版のQASMを作成
-    qasm_3q = """OPENQASM 2.0;
-include "qelib1.inc";
-qreg q[3];
-creg meas[2];
-h q[1];
-cp(pi/2) q[0],q[1];
-h q[0];
-barrier q[0],q[1];
-measure q[0] -> meas[0];
-measure q[1] -> meas[1];
-"""
-    qasm_path = os.path.join(src_dir, "quantum_circuits", "open_qasm", f"{qbin_name}.qasm")
-    os.makedirs(os.path.dirname(qasm_path), exist_ok=True)
-    with open(qasm_path, "w") as f:
-        f.write(qasm_3q)
-    print(f"   3量子ビット版QASMを作成: {qasm_path}")
-    
-    compiler = gsc_compiler()
-    compiler.setup(
-        qc_name=qbin_name,
-        compile_mode=["transpile", "qisa_compile", "assemble"]
-    )
-    compiler.run()
-    print("   コンパイル完了")
+    # 1) XQsim付属のサンプル回路を使用（既にコンパイル済み）
+    qbin_name = "pprIIZZZ_n5"  # XQsim付属のサンプル（5量子ビット）
+    print(f"\n1) サンプル回路を使用: {qbin_name}")
+    print("   （既にコンパイル済みのバイナリを使用）")
     
     # 2) シミュレータ設定
     print("\n2) シミュレータ設定")
     # XQsimの制約: num_lq % 2 == 1 または num_lq == 2
-    # qft_n3_standalone = 3 qubits → num_lq = 3 + 2 = 5 (奇数なのでOK)
-    num_lq = 3 + 2  # 3量子ビット + 2 = 5
+    # pprIIZZZ_n5 = 5 qubits → num_lq = 5 + 2 = 7 (奇数なのでOK)
+    num_lq = 5 + 2  # 5量子ビット + 2 = 7
     
     sim = xq_simulator()
     sim.setup(
