@@ -1,0 +1,531 @@
+{
+  "result": {
+    "meta": {
+      "version": 3,
+      "config": "example_cmos_d5",
+      "block_type": "Distillation",
+      "code_distance": 5,
+      "patch_grid": {
+        "rows": 3,
+        "cols": 4
+      },
+      "num_patches": 12,
+      "total_cycles": 17672,
+      "elapsed_seconds": 514.11,
+      "termination_reason": "normal",
+      "forced_terminations": [],
+      "stability_check_failures": [],
+      "warnings": [
+        "Padding applied: original 2 qubits -> 3 qubits for compilation. The last qubit (index 2) is unused."
+      ]
+    },
+    "input": {
+      "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];",
+      "num_qasm_qubits": 2,
+      "num_compile_qubits": 3,
+      "padding_applied": true
+    },
+    "compiled": {
+      "clifford_t_qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];\n",
+      "clifford_t_qasm_padded": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[3];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];\n",
+      "qisa": [
+        "PREP_INFO     NA   NA    NA   NA",
+        "LQI           NA   NA    0x00 [-,-,T,T,T,-,-,-,-,-,-,-,-,-,-,-,]",
+        "RUN_ESM       NA   NA    NA   NA",
+        "MERGE_INFO    NA   NA    0x00 [I,I,X,Z,I,I,I,I,I,I,I,I,I,I,I,I,]",
+        "INIT_INTMD    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PPM_INTERPRET +TTN 0x001 0x00 [I,I,X,Z,I,I,I,I,I,I,I,I,I,I,I,I,]",
+        "MEAS_INTMD    NA   NA    NA   NA",
+        "SPLIT_INFO    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "LQM_X         +FTN 0x002 0x00 [-,-,T,-,-,-,-,-,-,-,-,-,-,-,-,-,]"
+      ],
+      "qbin_name": "api_f609733c81bb40eeb9d8c418b9b177ec_n3"
+    },
+    "patch": {
+      "initial": [
+        {
+          "pchidx": 0,
+          "row": 0,
+          "col": 0,
+          "pchtype": "zt",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 1,
+          "row": 0,
+          "col": 1,
+          "pchtype": "mt",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 2,
+          "row": 0,
+          "col": 2,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 3,
+          "row": 0,
+          "col": 3,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 4,
+          "row": 1,
+          "col": 0,
+          "pchtype": "zb",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 5,
+          "row": 1,
+          "col": 1,
+          "pchtype": "mb",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 6,
+          "row": 1,
+          "col": 2,
+          "pchtype": "awe",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 7,
+          "row": 1,
+          "col": 3,
+          "pchtype": "x",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 8,
+          "row": 2,
+          "col": 0,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 9,
+          "row": 2,
+          "col": 1,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 10,
+          "row": 2,
+          "col": 2,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 11,
+          "row": 2,
+          "col": 3,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        }
+      ],
+      "events": [
+        {
+          "seq": 0,
+          "cycle": 18,
+          "qisa_idx": 3,
+          "inst": "MERGE_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 0,
+              "row": 0,
+              "col": 0,
+              "pchtype": "zt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "c",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 2,
+              "row": 0,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 4,
+              "row": 1,
+              "col": 0,
+              "pchtype": "zb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "c",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 5,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 3,
+              "pchtype": "x",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 2,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "cycle": 5121,
+          "qisa_idx": 8,
+          "inst": "SPLIT_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 2,
+              "row": 0,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 6,
+              "row": 1,
+              "col": 2,
+              "pchtype": "awe",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "ie",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 2,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 1,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

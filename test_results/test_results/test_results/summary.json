@@ -1,0 +1,58 @@
+{
+  "timestamp": "2025-12-31 14:08:28",
+  "total_tests": 6,
+  "passed": 2,
+  "failed": 4,
+  "results": [
+    {
+      "name": "test1_single_h",
+      "description": "1量子ビット: Hゲートのみ",
+      "status": "FAILED",
+      "error": "400 Client Error: Bad Request for url: http://localhost:8000/trace",
+      "local_duration": 2.45
+    },
+    {
+      "name": "test2_bell_state",
+      "description": "2量子ビット: Bell状態 (H + CNOT)",
+      "status": "SUCCESS",
+      "total_cycles": 17672,
+      "elapsed_seconds": 514.11,
+      "num_patches": 12,
+      "num_events": 2,
+      "termination_reason": "normal",
+      "local_duration": 514.14
+    },
+    {
+      "name": "test3_ghz_3qubit",
+      "description": "3量子ビット: GHZ状態",
+      "status": "SUCCESS",
+      "total_cycles": 29014,
+      "elapsed_seconds": 869.63,
+      "num_patches": 12,
+      "num_events": 5,
+      "termination_reason": "normal",
+      "local_duration": 869.66
+    },
+    {
+      "name": "test4_multiple_h",
+      "description": "3量子ビット: 複数のHゲート",
+      "status": "FAILED",
+      "error": "400 Client Error: Bad Request for url: http://localhost:8000/trace",
+      "local_duration": 0.44
+    },
+    {
+      "name": "test5_x_gate",
+      "description": "2量子ビット: Xゲート (NOT)",
+      "status": "FAILED",
+      "error": "400 Client Error: Bad Request for url: http://localhost:8000/trace",
+      "local_duration": 1.35
+    },
+    {
+      "name": "test6_z_gate",
+      "description": "2量子ビット: Zゲート",
+      "status": "FAILED",
+      "error": "400 Client Error: Bad Request for url: http://localhost:8000/trace",
+      "local_duration": 0.65
+    }
+  ]
+}
