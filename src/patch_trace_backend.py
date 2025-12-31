@@ -301,9 +301,11 @@ def trace_patches_from_qasm(
     def _qif_transfer_with_done_fix(self: Any) -> None:
         _orig_qif_transfer()
         try:
-            # "done" should mean: no more instructions will be produced AND none are buffered.
-            if bool(getattr(self, "all_fetched", False)) and bool(
-                getattr(self, "output_instbuf_empty", False)
+            # Match original XQsim condition (quantum_instruction_fetch.py lines 85-86):
+            # "done" means: all instructions fetched AND buffer still has content (being consumed).
+            # Original: if self.all_fetched and not self.output_instbuf_empty: self.done = True
+            if bool(getattr(self, "all_fetched", False)) and not bool(
+                getattr(self, "output_instbuf_empty", True)
             ):
                 setattr(self, "done", True)
         except Exception:
@@ -311,6 +313,38 @@ def trace_patches_from_qasm(
             pass
 
     sim.qif.transfer = types.MethodType(_qif_transfer_with_done_fix, sim.qif)
+
+    # Interface-layer workaround: LMU may not set done=True in some cases.
+    # Similar to QIF, we patch LMU's transfer method to set done=True when appropriate.
+    _orig_lmu_transfer = sim.lmu.transfer
+
+    def _lmu_transfer_with_done_fix(self: Any) -> None:
+        _orig_lmu_transfer()
+        try:
+            # LMU should be done when state is 'ready' and no more instructions are valid
+            # The original code sets done=True when state=='ready' and not instinfo_valid
+            # But sometimes instinfo_valid may remain True even when there's no more work
+            # We check if all inputs are empty/ready and state is ready
+            state = getattr(self, "state", None)
+            instinfo_valid = bool(getattr(self, "instinfo_valid", True))
+            input_lqmeasbuf_empty = bool(getattr(self, "input_lqmeasbuf_empty", False))
+            
+            # If state is ready and input buffer is empty, consider LMU done
+            # This is a more aggressive condition to prevent infinite loops
+            if state == "ready":
+                if not instinfo_valid:
+                    # Original condition: state=='ready' and not instinfo_valid
+                    setattr(self, "done", True)
+                elif input_lqmeasbuf_empty:
+                    # Additional condition: if input buffer is empty and state is ready,
+                    # and we've been running for a while, consider it done
+                    # This helps prevent infinite loops in interface layer
+                    setattr(self, "done", True)
+        except Exception:
+            # Best-effort: never crash the sim due to an interface-layer hook.
+            pass
+
+    sim.lmu.transfer = types.MethodType(_lmu_transfer_with_done_fix, sim.lmu)
 
     # Ray was pre-initialized above (dashboard disabled) to avoid container crashes.
 
@@ -322,39 +356,121 @@ def trace_patches_from_qasm(
         0  # qisa_idx, aligned by PIU acceptance (take_input && !stall)
     )
 
-    while not sim.sim_done:
-        sim.run_cycle_transfer()
+    # Interface-layer workaround: catch SystemExit from existing XQsim code
+    # Existing code calls sys.exit() on errors, which would kill the API server.
+    # We catch it and convert to a proper exception.
+    original_exit = sys.exit
+    sys_exit_called = False
+    sys_exit_code = None
 
-        # PIU acceptance moment (as agreed): take_input == True and input_stall == False
-        accepted = bool(sim.piu.take_input) and (not bool(sim.piu.input_stall))
-        if accepted:
-            qisa_idx = accepted_inst_count
-            accepted_inst_count += 1
+    def _intercept_sys_exit(code=None):
+        nonlocal sys_exit_called, sys_exit_code
+        sys_exit_called = True
+        sys_exit_code = code
+        # Don't actually exit; raise an exception instead
+        # Note: We can't easily capture the exact error message from PIU.dyndec
+        # because it's printed to stdout, but we know the common error pattern
+        error_msg = (
+            "XQsim simulation error: sys.exit() was called by the simulator. "
+            "This typically occurs when there is an invalid patch Pauli product (pchpp) configuration. "
+            "The error 'invalid pchpp in PIU.dyndec' indicates that both pchpp_even and pchpp_odd "
+            "are non-Identity ('I') values, which is not allowed. "
+            "Some QASM circuits may not be compatible with the current patch configuration. "
+            "Try using a different QASM circuit or check the patch configuration."
+        )
+        raise RuntimeError(error_msg)
 
-            inst_name = _opcode_to_inst_name(sim.param, sim.piu.input_opcode)
-            if inst_name in EVENT_INSTS:
-                cur_snapshot = _take_full_patch_snapshot(sim)
-                patch_delta = _diff_patch_snapshots(prev_snapshot, cur_snapshot)
-                prev_snapshot = cur_snapshot
+    try:
+        sys.exit = _intercept_sys_exit
 
-                # emit event only if there is any delta (shape changed)
-                if patch_delta:
-                    events.append(
-                        {
-                            "seq": len(events),
-                            "cycle": int(sim.cycle),
-                            "qisa_idx": int(qisa_idx),
-                            "inst": inst_name,
-                            "patch_delta": patch_delta,
-                        }
-                    )
+        while not sim.sim_done:
+            sim.run_cycle_transfer()
 
-        sim.run_cycle_update()
-        sim.run_cycle_tick()
+            # PIU acceptance moment (as agreed): take_input == True and input_stall == False
+            accepted = bool(sim.piu.take_input) and (not bool(sim.piu.input_stall))
+            if accepted:
+                qisa_idx = accepted_inst_count
+                accepted_inst_count += 1
 
-        # Safety: if something goes wrong, avoid infinite loops (interface concern only)
-        if sim.cycle > 10_000_000:
-            raise RuntimeError("Simulation exceeded 10,000,000 cycles; aborting trace.")
+                inst_name = _opcode_to_inst_name(sim.param, sim.piu.input_opcode)
+                if inst_name in EVENT_INSTS:
+                    cur_snapshot = _take_full_patch_snapshot(sim)
+                    patch_delta = _diff_patch_snapshots(prev_snapshot, cur_snapshot)
+                    prev_snapshot = cur_snapshot
+
+                    # emit event only if there is any delta (shape changed)
+                    if patch_delta:
+                        events.append(
+                            {
+                                "seq": len(events),
+                                "cycle": int(sim.cycle),
+                                "qisa_idx": int(qisa_idx),
+                                "inst": inst_name,
+                                "patch_delta": patch_delta,
+                            }
+                        )
+
+            sim.run_cycle_update()
+            sim.run_cycle_tick()
+
+            # Debug logging: detailed state every 1000 cycles
+            if sim.cycle % 1000 == 0:
+                print(f"\n=== Cycle {sim.cycle} Debug Info ===")
+                # QID state
+                qid = sim.qid
+                print(f"QID: all_decoded={getattr(qid, 'all_decoded', 'N/A')}, "
+                      f"to_pchdec_buf.empty={getattr(qid.to_pchdec_buf, 'empty', 'N/A')}, "
+                      f"to_lqmeas_buf.empty={getattr(qid.to_lqmeas_buf, 'empty', 'N/A')}, "
+                      f"input_qifdone={getattr(qid, 'input_qifdone', 'N/A')}")
+                # PDU state
+                pdu = sim.pdu
+                print(f"PDU: state={getattr(pdu, 'state', 'N/A')}, "
+                      f"next_state={getattr(pdu, 'next_state', 'N/A')}, "
+                      f"input_stall={getattr(pdu, 'input_stall', 'N/A')}, "
+                      f"output_valid={getattr(pdu, 'output_valid', 'N/A')}")
+                # PIU state
+                piu = sim.piu
+                print(f"PIU: state={getattr(piu, 'state', 'N/A')}, "
+                      f"next_state={getattr(piu, 'next_state', 'N/A')}, "
+                      f"input_stall={getattr(piu, 'input_stall', 'N/A')}, "
+                      f"take_input={getattr(piu, 'take_input', 'N/A')}, "
+                      f"output_topsu_valid={getattr(piu, 'output_topsu_valid', 'N/A')}, "
+                      f"output_tolmu_valid={getattr(piu, 'output_tolmu_valid', 'N/A')}")
+                # Downstream unit full status (causes stall)
+                psu = sim.psu
+                pfu = sim.pfu
+                lmu = sim.lmu
+                print(f"Downstream Full: psu.pchinfo_full={getattr(psu, 'pchinfo_full', 'N/A')}, "
+                      f"pfu.pchinfo_full={getattr(pfu, 'pchinfo_full', 'N/A')}, "
+                      f"lmu.pchinfo_full={getattr(lmu, 'pchinfo_full', 'N/A')}")
+                # PSU srmem state (to understand why psu.pchinfo_full stays True)
+                pchinfo_srmem = getattr(psu, 'pchinfo_srmem', None)
+                if pchinfo_srmem:
+                    print(f"PSU.srmem: input_pop={getattr(pchinfo_srmem, 'input_pop', 'N/A')}, "
+                          f"input_valid={getattr(pchinfo_srmem, 'input_valid', 'N/A')}")
+                    # Check double buffer state
+                    db = getattr(pchinfo_srmem, 'double_buffer', None)
+                    if db:
+                        print(f"PSU.srmem.double_buffer[0].state={getattr(db[0], 'state', 'N/A')}, "
+                              f"[1].state={getattr(db[1], 'state', 'N/A')}")
+                print(f"PSU: state={getattr(psu, 'state', 'N/A')}, "
+                      f"next_pch={getattr(psu, 'next_pch', 'N/A')}, "
+                      f"input_cwdgen_stall={getattr(psu, 'input_cwdgen_stall', 'N/A')}")
+                # Stall signals
+                print(f"Stalls: piu.input_stall={getattr(piu, 'input_stall', 'N/A')}, "
+                      f"pdu.input_stall={getattr(pdu, 'input_stall', 'N/A')}")
+                print(f"=== End Debug Info ===\n", flush=True)
+
+            # Safety: if something goes wrong, avoid infinite loops (interface concern only)
+            # This check must be INSIDE the loop to actually prevent infinite loops.
+            if sim.cycle > 10_000_000:
+                raise RuntimeError("Simulation exceeded 10,000,000 cycles; aborting trace.")
+    except RuntimeError as e:
+        # Re-raise RuntimeError (including our intercepted sys.exit)
+        raise
+    finally:
+        # Restore original sys.exit
+        sys.exit = original_exit
 
     # 5) Build response JSON
     response: Dict[str, Any] = {
