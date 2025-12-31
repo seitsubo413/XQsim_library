@@ -6,7 +6,8 @@
 # - We do NOT change XQsim core logic; container only provides a reproducible runtime.
 #
 # Apple Silicon (arm64) host: run linux/arm64 natively to avoid qemu crashes.
-FROM --platform=linux/arm64 python:3.10-slim-bullseye
+# Windows/Intel host: use linux/amd64
+FROM --platform=linux/amd64 python:3.10-slim-bullseye
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -19,7 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ghc \
     cabal-install \
-    && rm -rf /var/lib/apt/lists/*
+    libffi7 \
+    && rm -rf /var/lib/apt/lists/* && \
+    # Create symlink for libffi.so.6 if needed (for bundled gridsynth)
+    (ldconfig -p | grep -q libffi.so.7 && ln -sf /usr/lib/x86_64-linux-gnu/libffi.so.7 /usr/lib/x86_64-linux-gnu/libffi.so.6 || true)
 
 # Install python deps
 COPY requirements.txt /app/requirements.txt
@@ -40,15 +44,20 @@ RUN python -m pip install --no-cache-dir -U pip && \
 # Copy source
 COPY . /app
 
-# Build and install a native (arm64) gridsynth binary.
-# The repo bundles an x86_64 Linux gridsynth which is not usable on arm64.
-# We build the Haskell-based gridsynth via the `newsynth` package and place it where gsc_compiler expects.
-RUN cabal update && \
-    # Use a recent `newsynth` release compatible with the GHC/base version in this image.
-    cabal install --installdir=/usr/local/bin --install-method=copy --overwrite-policy=always newsynth && \
-    test -x /usr/local/bin/gridsynth && \
-    cp -f /usr/local/bin/gridsynth /app/src/compiler/gridsynth && \
-    chmod +x /app/src/compiler/gridsynth
+# Build and install a native gridsynth binary.
+# The repo bundles an x86_64 Linux gridsynth which works on amd64.
+# For arm64, we build the Haskell-based gridsynth via the `newsynth` package.
+# For amd64, we can use the bundled binary or build if needed.
+RUN if [ "$(uname -m)" = "aarch64" ]; then \
+        cabal update && \
+        cabal install --installdir=/usr/local/bin --install-method=copy --overwrite-policy=always newsynth && \
+        test -x /usr/local/bin/gridsynth && \
+        cp -f /usr/local/bin/gridsynth /app/src/compiler/gridsynth && \
+        chmod +x /app/src/compiler/gridsynth; \
+    else \
+        # For amd64, ensure the bundled gridsynth is executable
+        chmod +x /app/src/compiler/gridsynth || true; \
+    fi
 
 EXPOSE 8000
 

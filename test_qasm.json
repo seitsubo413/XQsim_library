@@ -1,0 +1,5 @@
+{
+  "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg meas[2];\nh q[1];\ncp(pi/2) q[0],q[1];\nh q[0];\nbarrier q[0],q[1];\nmeasure q[0] -> meas[0];\nmeasure q[1] -> meas[1];",
+  "config": "example_cmos_d5"
+}
+

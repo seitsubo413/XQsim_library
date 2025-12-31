@@ -57,6 +57,12 @@ def trace(req: TraceRequest) -> TraceResponse:
     except FileNotFoundError as e:
         # e.g., missing config file
         raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        # RuntimeError from simulation (e.g., sys.exit interception, infinite loop)
+        tb = traceback.format_exc()
+        logger.error("Simulation error in /trace: %s\n%s", repr(e), tb)
+        # Return 400 Bad Request for simulation errors (invalid input)
+        raise HTTPException(status_code=400, detail=f"Simulation error: {e}")
     except Exception as e:
         # Interface-layer: log full traceback for debugging.
         tb = traceback.format_exc()
