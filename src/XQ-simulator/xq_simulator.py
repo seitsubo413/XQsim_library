@@ -42,6 +42,7 @@ class xq_simulator:
         self.qbin = None 
         self.num_lq = None
         self.skip_pqsim = None
+        self.emulate = False  # Bugfix: missing attribute used at lines 170 & 356
         self.num_shots = None 
         self.dump = None
         self.regen = None
@@ -70,6 +71,7 @@ class xq_simulator:
             self.num_lq = num_lq
         if skip_pqsim is not None:
             self.skip_pqsim = skip_pqsim
+            self.emulate = skip_pqsim  # Bugfix: sync with skip_pqsim
         if num_shots is not None: 
             self.num_shots = num_shots
         if dump is not None:
