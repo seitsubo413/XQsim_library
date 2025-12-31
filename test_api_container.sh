@@ -148,3 +148,4 @@ PASSED=0
 echo ""
 echo "合計: $PASSED/3 テストが成功しました"
 
+

@@ -56,3 +56,4 @@ while ($true) {
 
 Write-Host "`n確認を終了しました。" -ForegroundColor Cyan
 
+
