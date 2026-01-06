@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-01-06 16:43:57",
+  "test_type": "3量子ビット多段回路",
+  "total_tests": 5,
+  "passed": 4,
+  "failed": 1,
+  "results": [
+    {
+      "name": "test_3q_linear_chain_4stage",
+      "description": "3量子ビット: 線形連鎖（4段CNOT）",
+      "status": "FAILED",
+      "http_status": 400,
+      "error": "Simulation error: XQsim simulation error: sys.exit() was called by the simulator. This typically occurs when there is an invalid patch Pauli product (pchpp) configuration. Exit code: None",
+      "local_duration": 3.48
+    },
+    {
+      "name": "test_3q_fan_out_chain",
+      "description": "3量子ビット: ファンアウト連鎖（5段）",
+      "status": "SUCCESS",
+      "total_cycles": 39741,
+      "elapsed_seconds": 1220.83,
+      "num_patches": 12,
+      "num_events": 8,
+      "num_qisa_instructions": 26,
+      "termination_reason": "normal",
+      "local_duration": 1220.86
+    },
+    {
+      "name": "test_3q_mixed_operations",
+      "description": "3量子ビット: 混合操作（H/X/Z+CNOT、6段）",
+      "status": "SUCCESS",
+      "total_cycles": 29014,
+      "elapsed_seconds": 896.57,
+      "num_patches": 12,
+      "num_events": 5,
+      "num_qisa_instructions": 19,
+      "termination_reason": "normal",
+      "local_duration": 896.6
+    },
+    {
+      "name": "test_3q_ghz_chain",
+      "description": "3量子ビット: GHZ状態連鎖（3回生成）",
+      "status": "SUCCESS",
+      "total_cycles": 39741,
+      "elapsed_seconds": 1280.47,
+      "num_patches": 12,
+      "num_events": 8,
+      "num_qisa_instructions": 26,
+      "termination_reason": "normal",
+      "local_duration": 1280.51
+    },
+    {
+      "name": "test_3q_deep_circuit",
+      "description": "3量子ビット: 深い回路（8段CNOT連鎖）",
+      "status": "SUCCESS",
+      "total_cycles": 29014,
+      "elapsed_seconds": 940.2,
+      "num_patches": 12,
+      "num_events": 5,
+      "num_qisa_instructions": 19,
+      "termination_reason": "normal",
+      "local_duration": 940.24
+    }
+  ]
+}
