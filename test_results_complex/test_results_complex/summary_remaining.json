@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-01-07 09:15:07",
+  "test_type": "remaining_3",
+  "total_tests": 3,
+  "passed": 2,
+  "failed": 1,
+  "results": [
+    {
+      "name": "test_3q_toffoli_decomposed",
+      "description": "3量子ビット: Toffoliゲート分解 (H, T, Tdg, CNOT)",
+      "status": "FAILED",
+      "http_status": 504,
+      "error": "Trace timeout: Trace operation timed out after 86400.8 seconds",
+      "elapsed_seconds": 86401.25
+    },
+    {
+      "name": "test_6q_ladder",
+      "description": "6量子ビット: ラダー型CNOT",
+      "status": "SUCCESS",
+      "grid": "3x6",
+      "num_patches": 18,
+      "total_cycles": 51702,
+      "elapsed_seconds": 3218.72,
+      "num_events": 11,
+      "termination_reason": "normal"
+    },
+    {
+      "name": "test_4q_full_entangle",
+      "description": "4量子ビット: 全対全エンタングルメント",
+      "status": "SUCCESS",
+      "grid": "3x5",
+      "num_patches": 15,
+      "total_cycles": 40353,
+      "elapsed_seconds": 2119.09,
+      "num_events": 8,
+      "termination_reason": "normal"
+    }
+  ]
+}
