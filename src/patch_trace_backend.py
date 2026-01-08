@@ -192,6 +192,83 @@ def _format_cornerbd(cornerbd_list: List[str]) -> Dict[str, str]:
     }
 
 
+def _build_logical_qubit_mapping(
+    sim: Any,
+    num_qasm_qubits: int,
+    num_compile_qubits: int,
+) -> List[Dict[str, Any]]:
+    """
+    論理キュービットとパッチの対応関係を構築する。
+    
+    XQsimでは論理キュービットは以下のように割り当てられる:
+    - lq_idx 0: Zアンシラ (magic state用)
+    - lq_idx 1: Mアンシラ (zero state用)
+    - lq_idx 2以降: ユーザーの論理キュービット (q[0], q[1], ...)
+    
+    Returns:
+        論理キュービットマッピング情報のリスト
+    """
+    mapping: List[Dict[str, Any]] = []
+    
+    try:
+        # patch_decode_unitからマッピングテーブルを取得
+        pch_maptable = getattr(sim.pdu, "pch_maptable", None)
+        if pch_maptable is None:
+            return mapping
+        
+        num_lq = sim.param.num_lq
+        num_pchcol = sim.param.num_pchcol
+        num_pchrow = sim.param.num_pchrow
+        
+        for lq_idx in range(num_lq):
+            entry: Dict[str, Any] = {
+                "lq_idx": lq_idx,
+            }
+            
+            # 役割を決定
+            if lq_idx == 0:
+                entry["role"] = "z_ancilla"
+                entry["description"] = "Magic state ancilla (Z-type)"
+            elif lq_idx == 1:
+                entry["role"] = "m_ancilla"
+                entry["description"] = "Zero state ancilla (M-type)"
+            else:
+                user_qubit_idx = lq_idx - 2
+                if user_qubit_idx < num_qasm_qubits:
+                    entry["role"] = "data"
+                    entry["qubit_index"] = user_qubit_idx
+                    entry["description"] = f"User qubit q[{user_qubit_idx}]"
+                else:
+                    entry["role"] = "padding"
+                    entry["qubit_index"] = user_qubit_idx
+                    entry["description"] = f"Padding qubit (unused)"
+            
+            # パッチインデックスを取得
+            pch_tuple = pch_maptable[lq_idx] if lq_idx < len(pch_maptable) else (None, None)
+            pchidx_1, pchidx_2 = pch_tuple
+            
+            if pchidx_1 is not None:
+                # パッチ座標を計算 (row, col)
+                row_1, col_1 = divmod(pchidx_1, num_pchcol)
+                entry["patch_indices"] = [pchidx_1] if pchidx_1 == pchidx_2 else [pchidx_1, pchidx_2]
+                entry["patch_coords"] = [[row_1, col_1]]
+                
+                if pchidx_1 != pchidx_2 and pchidx_2 is not None:
+                    row_2, col_2 = divmod(pchidx_2, num_pchcol)
+                    entry["patch_coords"].append([row_2, col_2])
+                
+                # パッチタイプを取得
+                pchinfo = sim.piu.pchinfo_static_ram[pchidx_1] if pchidx_1 < len(sim.piu.pchinfo_static_ram) else {}
+                entry["pchtype"] = _to_json_safe(pchinfo.get("pchtype", "unknown"))
+            
+            mapping.append(entry)
+    
+    except Exception as e:
+        logger.warning(f"Failed to build logical qubit mapping: {e}")
+    
+    return mapping
+
+
 def _take_full_patch_snapshot(sim: Any) -> PatchSnapshot:
     """
     Read PIU internal state and format it for JSON.
@@ -701,6 +778,9 @@ def trace_patches_from_qasm(
             "initial": patch_initial.patches,
             "events": events,
         },
+        "logical_qubit_mapping": _build_logical_qubit_mapping(
+            sim, num_qasm_qubits, num_compile_qubits
+        ),
     }
 
     # 6) Cleanup artifacts unless requested otherwise
