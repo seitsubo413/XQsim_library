@@ -285,6 +285,116 @@ def _build_gate_to_event_mapping(
     return mapping
 
 
+def _build_clifford_t_gate_timeline(
+    compilation_trace: Dict[str, Any],
+    events: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """
+    Clifford+T回路のすべてのゲートにサイクル情報を付加したタイムラインを構築する。
+    
+    Args:
+        compilation_trace: gsc_compiler.compilation_trace
+        events: patch.events リスト
+    
+    Returns:
+        すべてのClifford+Tゲートのタイムライン
+    """
+    timeline: List[Dict[str, Any]] = []
+    
+    try:
+        ppr_operations = compilation_trace.get("ppr_operations", [])
+        circ_list = compilation_trace.get("circ_list", [])
+        
+        if not circ_list:
+            return timeline
+        
+        # gate_idx → PPR/PPM情報のマップを構築
+        gate_to_ppr: Dict[int, Dict[str, Any]] = {}
+        for ppr_op in ppr_operations:
+            for gate_idx in ppr_op.get("source_gate_indices", []):
+                gate_to_ppr[gate_idx] = ppr_op
+        
+        # PPR/PPM → サイクル範囲のマップを構築
+        ppr_to_cycles: Dict[int, Dict[str, int]] = {}
+        for ppr_op in ppr_operations:
+            ppr_idx = ppr_op.get("ppr_idx")
+            qisa_start = ppr_op.get("qisa_start_idx")
+            qisa_end = ppr_op.get("qisa_end_idx")
+            
+            # この範囲内のイベントからサイクル情報を取得
+            cycle_start = None
+            cycle_end = None
+            for event in events:
+                qisa_idx = event.get("qisa_idx")
+                cycle = event.get("cycle")
+                if qisa_idx is not None and qisa_start is not None and qisa_end is not None:
+                    if qisa_start <= qisa_idx <= qisa_end and cycle is not None:
+                        if cycle_start is None or cycle < cycle_start:
+                            cycle_start = cycle
+                        if cycle_end is None or cycle > cycle_end:
+                            cycle_end = cycle
+            
+            if ppr_idx is not None:
+                ppr_to_cycles[ppr_idx] = {
+                    "cycle_start": cycle_start,
+                    "cycle_end": cycle_end,
+                }
+        
+        # 各ゲートを処理
+        for gate_idx, gate_info in enumerate(circ_list):
+            gate_name = gate_info[0] if isinstance(gate_info, list) else str(gate_info)
+            gate_args = gate_info[1] if isinstance(gate_info, list) and len(gate_info) > 1 else []
+            
+            # キュービット情報を抽出
+            gate_qubits = []
+            if isinstance(gate_args, (list, tuple)):
+                for arg in gate_args:
+                    if hasattr(arg, 'index'):
+                        idx = arg.index
+                        if isinstance(idx, (list, tuple)):
+                            gate_qubits.extend(idx)
+                        else:
+                            gate_qubits.append(idx)
+                    elif isinstance(arg, int):
+                        gate_qubits.append(arg)
+            
+            entry: Dict[str, Any] = {
+                "gate_idx": gate_idx,
+                "gate": gate_name.lower(),
+                "qubits": gate_qubits,
+            }
+            
+            if gate_idx in gate_to_ppr:
+                # このゲートはPPR/PPMを生成する（T or Measure）
+                ppr_op = gate_to_ppr[gate_idx]
+                ppr_idx = ppr_op.get("ppr_idx")
+                cycles = ppr_to_cycles.get(ppr_idx, {})
+                entry["cycle_start"] = cycles.get("cycle_start")
+                entry["cycle_end"] = cycles.get("cycle_end")
+                entry["executed_before_cycle"] = None
+            else:
+                # このゲートはPauli Frame Tracking（H, CX, S など）
+                # 次のPPR/PPMの開始サイクルを探す
+                next_cycle = None
+                for future_idx in range(gate_idx + 1, len(circ_list)):
+                    if future_idx in gate_to_ppr:
+                        ppr_op = gate_to_ppr[future_idx]
+                        ppr_idx = ppr_op.get("ppr_idx")
+                        cycles = ppr_to_cycles.get(ppr_idx, {})
+                        next_cycle = cycles.get("cycle_start")
+                        break
+                entry["cycle_start"] = None
+                entry["cycle_end"] = None
+                entry["executed_before_cycle"] = next_cycle
+            
+            timeline.append(entry)
+    
+    except Exception as e:
+        logger.warning(f"Failed to build Clifford+T gate timeline: {e}")
+    
+    return timeline
+
+
 def _build_logical_qubit_mapping(
     sim: Any,
     num_qasm_qubits: int,
@@ -876,6 +986,9 @@ def trace_patches_from_qasm(
         ),
         "gate_to_event_mapping": _build_gate_to_event_mapping(
             compiler.compilation_trace, events, qisa_lines
+        ) if hasattr(compiler, "compilation_trace") else [],
+        "clifford_t_gate_timeline": _build_clifford_t_gate_timeline(
+            compiler.compilation_trace, events
         ) if hasattr(compiler, "compilation_trace") else [],
     }
 
