@@ -644,8 +644,7 @@ def construct_one_block (starting_index, circ_list, track_gates=False):
     sign_pos = True
     gate_indices = [starting_index] if track_gates else []
 
-    for idx, op in enumerate(reversed(circ_list[0:starting_index])):
-        gate_idx = starting_index - 1 - idx  # 元のインデックス
+    for op in reversed(circ_list[0:starting_index]):
         # X, Y, Z, H, CX, S, T, Measure
         # ignore measurement now
         op_name = op[0]
