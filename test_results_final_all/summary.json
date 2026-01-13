@@ -1,0 +1,123 @@
+{
+  "timestamp": "2026-01-13 18:54:37",
+  "version": "latest_with_gate_mapping",
+  "test_type": "final_results_rerun",
+  "total_tests": 13,
+  "passed": 1,
+  "failed": 12,
+  "mapping_available": 1,
+  "results": [
+    {
+      "name": "circuit_2q_cnot_simple",
+      "description": "2量子ビット: シンプルなCNOT",
+      "status": "SUCCESS",
+      "grid": "3x4",
+      "num_patches": 12,
+      "total_cycles": 17672,
+      "elapsed_seconds": 755.09,
+      "elapsed_minutes": 12.58,
+      "num_events": 2,
+      "total_patch_changes": 9,
+      "num_logical_qubits": 5,
+      "gate_mapping_available": true,
+      "gate_mapping_count": 2,
+      "termination_reason": "normal"
+    },
+    {
+      "name": "circuit_2q_bell_state",
+      "description": "2量子ビット: Bell状態 (H + CNOT)",
+      "status": "FAILED",
+      "http_status": 500,
+      "error": "HTTP Error 500: Internal Server Error",
+      "elapsed_seconds": 277.67
+    },
+    {
+      "name": "circuit_2q_x_cnot",
+      "description": "2量子ビット: X + CNOT",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.85
+    },
+    {
+      "name": "circuit_2q_z_cnot",
+      "description": "2量子ビット: Z + CNOT",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "name": "circuit_2q_h_both_cnot",
+      "description": "2量子ビット: 両方にH + CNOT",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "<urlopen error [WinError 10053] 確立された接続がホスト コンピューターのソウトウェアによって中止されました。>",
+      "elapsed_seconds": 0.02
+    },
+    {
+      "name": "circuit_3q_linear",
+      "description": "3量子ビット: 線形CNOT (0→1→2)",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "<urlopen error [WinError 10053] 確立された接続がホスト コンピューターのソウトウェアによって中止されました。>",
+      "elapsed_seconds": 0.01
+    },
+    {
+      "name": "circuit_3q_fan_out",
+      "description": "3量子ビット: ファンアウト (0→1, 0→2)",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "name": "circuit_3q_bell_chain",
+      "description": "3量子ビット: Bell状態連鎖",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.01
+    },
+    {
+      "name": "circuit_4q_ghz",
+      "description": "4量子ビット: GHZ状態 (H + 3つのCNOT)",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "<urlopen error [WinError 10053] 確立された接続がホスト コンピューターのソウトウェアによって中止されました。>",
+      "elapsed_seconds": 0.02
+    },
+    {
+      "name": "circuit_4q_ring",
+      "description": "4量子ビット: リング構造CNOT",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "name": "circuit_4q_full_entangle",
+      "description": "4量子ビット: 全対全エンタングルメント",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "name": "circuit_5q_linear",
+      "description": "5量子ビット: 線形CNOT連鎖",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.0
+    },
+    {
+      "name": "circuit_6q_ladder",
+      "description": "6量子ビット: ラダー型CNOT",
+      "status": "ERROR",
+      "http_status": null,
+      "error": "Remote end closed connection without response",
+      "elapsed_seconds": 0.0
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-01-13 19:37:01",
+  "test_type": "3q_linear_verification",
+  "circuit": {
+    "name": "test_3q_linear",
+    "description": "3量子ビット: H + 2つのCNOT",
+    "status": "SUCCESS",
+    "grid": "3x4",
+    "num_patches": 12,
+    "total_cycles": 29014,
+    "elapsed_seconds": 1256.6,
+    "elapsed_minutes": 20.94,
+    "num_events": 5,
+    "total_patch_changes": 21,
+    "num_logical_qubits": 5,
+    "gate_mapping_available": true,
+    "gate_mapping_count": 3,
+    "qisa_count": 19,
+    "termination_reason": "normal"
+  }
+}
