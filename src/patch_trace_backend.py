@@ -229,15 +229,15 @@ def _build_gate_to_event_mapping(
         # 各PPR/PPM操作に対してゲート→イベントマッピングを構築
         for ppr_op in ppr_operations:
             gate_indices = ppr_op.get("source_gate_indices", [])
-            merge_info_idx = ppr_op.get("merge_info_qisa_idx")
-            split_info_idx = ppr_op.get("split_info_qisa_idx")
+            qisa_start = ppr_op.get("qisa_start_idx")
+            qisa_end = ppr_op.get("qisa_end_idx")
             
-            # このPPR/PPMに関連するイベントを収集
+            # このPPR/PPMのQISA範囲内のすべてのイベントを収集
             related_events = []
-            if merge_info_idx is not None and merge_info_idx in qisa_to_events:
-                related_events.extend(qisa_to_events[merge_info_idx])
-            if split_info_idx is not None and split_info_idx in qisa_to_events:
-                related_events.extend(qisa_to_events[split_info_idx])
+            if qisa_start is not None and qisa_end is not None:
+                for qisa_idx in range(qisa_start, qisa_end + 1):
+                    if qisa_idx in qisa_to_events:
+                        related_events.extend(qisa_to_events[qisa_idx])
             
             # 各ゲートに対してマッピングエントリを作成
             for gate_idx in gate_indices:
@@ -249,11 +249,16 @@ def _build_gate_to_event_mapping(
                     # ゲートのキュービット情報を抽出
                     gate_qubits = []
                     if isinstance(gate_args, (list, tuple)) and len(gate_args) > 0:
-                        if gate_name == "CX" and len(gate_args) >= 2:
-                            gate_qubits = [gate_args[0].index if hasattr(gate_args[0], 'index') else gate_args[0],
-                                          gate_args[1].index if hasattr(gate_args[1], 'index') else gate_args[1]]
-                        elif len(gate_args) >= 1:
-                            gate_qubits = [gate_args[0].index if hasattr(gate_args[0], 'index') else gate_args[0]]
+                        for arg in gate_args:
+                            if hasattr(arg, 'index'):
+                                # pytket Qubit/Bit オブジェクト
+                                idx = arg.index
+                                if isinstance(idx, (list, tuple)):
+                                    gate_qubits.extend(idx)
+                                else:
+                                    gate_qubits.append(idx)
+                            elif isinstance(arg, int):
+                                gate_qubits.append(arg)
                     
                     mapping.append({
                         "gate_idx": gate_idx,
