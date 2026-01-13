@@ -121,8 +121,8 @@ class gsc_compiler:
         
         # QISA行番号を追跡
         qisa_line_idx = 0
-        ppr_idx = 0  # PPR操作のインデックス
-        ppm_idx = 0  # PPM操作のインデックス
+        ppr_idx = 0  # PPR操作のインデックス（ファイルから読み込む順序）
+        ppm_idx = 0  # PPM操作のインデックス（ファイルから読み込む順序）
 
         # Iteratively generate qisa lines from qtrp lines
         qtrp_line_format = compile("{} {} [{}] [{}] {}\n")
@@ -237,7 +237,7 @@ class gsc_compiler:
                     ppr_block = self.compilation_trace["ppr_list_tracked"][ppr_idx]
                     gate_indices = ppr_block[3] if len(ppr_block) > 3 else []
                     self.compilation_trace["ppr_operations"].append({
-                        "ppr_idx": ppr_idx,
+                        "ppr_idx": len(self.compilation_trace["ppr_operations"]),
                         "op_type": "PPR",
                         "pauli_product": pauli_product,
                         "sign": sign,
@@ -646,8 +646,6 @@ def construct_one_block (starting_index, circ_list, track_gates=False):
 
     for idx, op in enumerate(reversed(circ_list[0:starting_index])):
         gate_idx = starting_index - 1 - idx  # 元のインデックス
-        if track_gates:
-            gate_indices.append(gate_idx)
         # X, Y, Z, H, CX, S, T, Measure
         # ignore measurement now
         op_name = op[0]
