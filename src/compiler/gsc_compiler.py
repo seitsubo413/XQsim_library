@@ -35,6 +35,13 @@ class gsc_compiler:
         self.compile_mode = None
         isa_def_path = os.path.join(par_dir, "isa_format.json")
         self.isa_def = util.getJsonData(isa_def_path)
+        # コンパイルトレース情報を保持
+        self.compilation_trace = {
+            "ppr_operations": [],
+            "circ_list": None,  # Clifford+Tゲートリスト
+            "ppr_list_tracked": None,  # ゲート追跡付きPPRリスト
+            "ppm_list_tracked": None,  # ゲート追跡付きPPMリスト
+        }
 
     def setup(self, qc_name, compile_mode):
         self.qc_name = qc_name
@@ -74,7 +81,16 @@ class gsc_compiler:
 
         # Run the circuit translation
         clif_t_qc = decompose_qc_to_Clifford_T(qc)
-        ppr_qc = format_ppr(*decompose_Clifford_T_to_PPR(clif_t_qc))
+        
+        # ゲート追跡モードでPPR/PPMを生成（内部情報用）
+        ppr_list_tracked, ppm_list_tracked, circ_list = decompose_Clifford_T_to_PPR(clif_t_qc, track_gates=True)
+        self.compilation_trace["circ_list"] = circ_list
+        self.compilation_trace["ppr_list_tracked"] = ppr_list_tracked
+        self.compilation_trace["ppm_list_tracked"] = ppm_list_tracked
+        
+        # 通常モードでPPR/PPMを生成（ファイル出力用）
+        ppr_list, ppm_list = decompose_Clifford_T_to_PPR(clif_t_qc, track_gates=False)
+        ppr_qc = format_ppr(ppr_list, ppm_list)
 
         # Write the fomatted string to the output file
         qtrp = open(self.qtrp_filepath, "w")
@@ -102,6 +118,11 @@ class gsc_compiler:
         num_lq = get_num_lq(self.qasm_filepath) + 2
         first_op = True
         mreg_free_idx = 1  
+        
+        # QISA行番号を追跡
+        qisa_line_idx = 0
+        ppr_idx = 0  # PPR操作のインデックス
+        ppm_idx = 0  # PPM操作のインデックス
 
         # Iteratively generate qisa lines from qtrp lines
         qtrp_line_format = compile("{} {} [{}] [{}] {}\n")
@@ -120,6 +141,8 @@ class gsc_compiler:
 
             # Generate and write qisa lines based on the target op
             qisa_str = ""
+            qisa_start_idx = qisa_line_idx  # このPPR/PPMの開始行番号
+            
             if op == "PPR":
                 lqlist = [0, 1] + lqlist
                 # PPR(pi/8) is implemented by the auto-corrected pi/8 rotation in [Ref.B].
@@ -127,6 +150,7 @@ class gsc_compiler:
                 ## PREP_INFO
                 qisa_str += build_qisa_lines(inst="PREP_INFO",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## LQI
                 qisa_str += build_qisa_lines(inst="LQI",
                                              lqlist=lqlist,
@@ -134,21 +158,27 @@ class gsc_compiler:
                                              isa_def=self.isa_def,
                                              op = "PPR",
                                              first_op=first_op)
+                qisa_line_idx += 1
                 ## RUN_ESM
                 qisa_str += build_qisa_lines(inst="RUN_ESM",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## MERGE_INFO
                 qisa_str += build_qisa_lines(inst="MERGE_INFO",
                                              lqlist=lqlist,
                                              pauli_product=["Y", "Z"]+pauli_product,
                                              num_lq=num_lq,
                                              isa_def=self.isa_def)
+                merge_info_idx = qisa_line_idx
+                qisa_line_idx += 1
                 ## INIT_INTMD
                 qisa_str += build_qisa_lines(inst="INIT_INTMD",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## RUN_ESM
                 qisa_str += build_qisa_lines(inst="RUN_ESM",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## PPM_INTERPRET (b)
                 qisa_str += build_qisa_lines(inst="PPM_INTERPRET",
                                              meas_flag="+FFB",
@@ -157,6 +187,7 @@ class gsc_compiler:
                                              pauli_product=["Y", "Z"],
                                              num_lq=num_lq,
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## PPM_INTERPRET (a)
                 qisa_str += build_qisa_lines(inst="PPM_INTERPRET",
                                              meas_flag=sign+"TTA",
@@ -166,16 +197,21 @@ class gsc_compiler:
                                              num_lq=num_lq,
                                              isa_def=self.isa_def)
                 mreg_free_idx = set_mreg_free_idx(mreg_free_idx, num_lq)
+                qisa_line_idx += 1
 
                 ## MEAS_INTMD
                 qisa_str += build_qisa_lines(inst="MEAS_INTMD",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## SPLIT_INFO
                 qisa_str += build_qisa_lines(inst="SPLIT_INFO",
                                              isa_def=self.isa_def)
+                split_info_idx = qisa_line_idx
+                qisa_line_idx += 1
                 ## RUN_ESM
                 qisa_str += build_qisa_lines(inst="RUN_ESM",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## LQM_X
                 qisa_str += build_qisa_lines(inst="LQM_X",
                                              meas_flag="+FFD",
@@ -184,6 +220,7 @@ class gsc_compiler:
                                              num_lq = num_lq,
                                              isa_def=self.isa_def)
                 mreg_free_idx = set_mreg_free_idx(mreg_free_idx, num_lq)
+                qisa_line_idx += 1
                 
                 ## LQM_FB
                 qisa_str += build_qisa_lines(inst="LQM_FB",
@@ -193,6 +230,25 @@ class gsc_compiler:
                                              num_lq = num_lq,
                                              isa_def=self.isa_def)
                 mreg_free_idx = set_mreg_free_idx(mreg_free_idx, num_lq)
+                qisa_line_idx += 1
+                
+                # PPR操作の追跡情報を記録
+                if self.compilation_trace["ppr_list_tracked"] is not None and ppr_idx < len(self.compilation_trace["ppr_list_tracked"]):
+                    ppr_block = self.compilation_trace["ppr_list_tracked"][ppr_idx]
+                    gate_indices = ppr_block[3] if len(ppr_block) > 3 else []
+                    self.compilation_trace["ppr_operations"].append({
+                        "ppr_idx": ppr_idx,
+                        "op_type": "PPR",
+                        "pauli_product": pauli_product,
+                        "sign": sign,
+                        "target_qubits": lqlist,
+                        "source_gate_indices": gate_indices,
+                        "qisa_start_idx": qisa_start_idx,
+                        "qisa_end_idx": qisa_line_idx - 1,
+                        "merge_info_qisa_idx": merge_info_idx,
+                        "split_info_qisa_idx": split_info_idx,
+                    })
+                    ppr_idx += 1
                 
             elif op == "PPM":
                 # PPM is implemented by the lattice surgery, which merges and splits the logical qubit patches. 
@@ -200,6 +256,7 @@ class gsc_compiler:
                 ## PREP_INFO
                 qisa_str += build_qisa_lines(inst="PREP_INFO",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## LQI
                 qisa_str += build_qisa_lines(inst="LQI",
                                              lqlist=lqlist,
@@ -207,22 +264,30 @@ class gsc_compiler:
                                              isa_def=self.isa_def,
                                              op="PPM",
                                              first_op=first_op)
+                qisa_line_idx += 1
                 ## RUN_ESM
                 if first_op:
-                    qisa_str += build_qisa_lines(inst="RUN_ESM",
+                    run_esm_str = build_qisa_lines(inst="RUN_ESM",
                                                  isa_def=self.isa_def)
+                    qisa_str += run_esm_str
+                    if run_esm_str.strip():  # 空でない場合のみカウント
+                        qisa_line_idx += 1
                 ## MERGE_INFO
                 qisa_str += build_qisa_lines(inst="MERGE_INFO",
                                              lqlist=lqlist,
                                              pauli_product=pauli_product,
                                              num_lq=num_lq,
                                              isa_def=self.isa_def)
+                merge_info_idx = qisa_line_idx
+                qisa_line_idx += 1
                 ## INIT_INTMD
                 qisa_str += build_qisa_lines(inst="INIT_INTMD",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## RUN_ESM
                 qisa_str += build_qisa_lines(inst="RUN_ESM",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## PPM_INTERPRET (normal)
                 qisa_str += build_qisa_lines(inst="PPM_INTERPRET",
                                              meas_flag=sign+"TTN",
@@ -232,16 +297,39 @@ class gsc_compiler:
                                              num_lq=num_lq,
                                              isa_def=self.isa_def)
                 mreg_free_idx = set_mreg_free_idx(mreg_free_idx, num_lq)
+                qisa_line_idx += 1
                 
                 ## MEAS_INTMD
                 qisa_str += build_qisa_lines(inst="MEAS_INTMD",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
                 ## SPLIT_INFO
                 qisa_str += build_qisa_lines(inst="SPLIT_INFO",
                                              isa_def=self.isa_def)
+                split_info_idx = qisa_line_idx
+                qisa_line_idx += 1
                 ## RUN_ESM
                 qisa_str += build_qisa_lines(inst="RUN_ESM",
                                              isa_def=self.isa_def)
+                qisa_line_idx += 1
+                
+                # PPM操作の追跡情報を記録
+                if self.compilation_trace["ppm_list_tracked"] is not None and ppm_idx < len(self.compilation_trace["ppm_list_tracked"]):
+                    ppm_block = self.compilation_trace["ppm_list_tracked"][ppm_idx]
+                    gate_indices = ppm_block[3] if len(ppm_block) > 3 else []
+                    self.compilation_trace["ppr_operations"].append({
+                        "ppr_idx": len(self.compilation_trace["ppr_operations"]),
+                        "op_type": "PPM",
+                        "pauli_product": pauli_product,
+                        "sign": sign,
+                        "target_qubits": lqlist,
+                        "source_gate_indices": gate_indices,
+                        "qisa_start_idx": qisa_start_idx,
+                        "qisa_end_idx": qisa_line_idx - 1,
+                        "merge_info_qisa_idx": merge_info_idx,
+                        "split_info_qisa_idx": split_info_idx,
+                    })
+                    ppm_idx += 1
 
             elif op == "SQM":
                 # Handle the remaining single-qubit measurements
@@ -252,6 +340,25 @@ class gsc_compiler:
                                              num_lq=num_lq,
                                              isa_def=self.isa_def)
                 mreg_free_idx = set_mreg_free_idx(mreg_free_idx, num_lq)
+                qisa_line_idx += 1
+                
+                # SQM操作の追跡情報を記録（PPMの一部として処理される）
+                if self.compilation_trace["ppm_list_tracked"] is not None and ppm_idx < len(self.compilation_trace["ppm_list_tracked"]):
+                    ppm_block = self.compilation_trace["ppm_list_tracked"][ppm_idx]
+                    gate_indices = ppm_block[3] if len(ppm_block) > 3 else []
+                    self.compilation_trace["ppr_operations"].append({
+                        "ppr_idx": len(self.compilation_trace["ppr_operations"]),
+                        "op_type": "SQM",
+                        "pauli_product": [pp],
+                        "sign": sign,
+                        "target_qubits": lqlist,
+                        "source_gate_indices": gate_indices,
+                        "qisa_start_idx": qisa_start_idx,
+                        "qisa_end_idx": qisa_line_idx - 1,
+                        "merge_info_qisa_idx": None,
+                        "split_info_qisa_idx": None,
+                    })
+                    ppm_idx += 1
             else:
                 raise Exception("qisa_compile - Undefined operation: ", op)
             if first_op:
@@ -499,33 +606,48 @@ def parse_to_tket_format(op_list):
     return circ
 
 # Function to decompose a (Clifford+T) circuit to the sequence of PPRs and PPMs
-def decompose_Clifford_T_to_PPR (qc_clifford_T):
+def decompose_Clifford_T_to_PPR (qc_clifford_T, track_gates=False):
     circ = qiskit_to_tk(qc_clifford_T)
     circ_list = [[com.op.get_name(), com.args] for com in list(circ)]
 
     # Build PPR(pi/8) from T gates
     circ_ppr_list = []
     for T_index in list(filter(lambda e: circ_list[e][0] == "T", range(len(circ_list)))):
-        circ_ppr_list.append(construct_one_block(T_index, circ_list))
+        block = construct_one_block(T_index, circ_list, track_gates=track_gates)
+        circ_ppr_list.append(block)
 
     # Build PPM from Measurement
     circ_ppm_list = []
     for M_index in list(filter(lambda e: circ_list[e][0] == "Measure", range(len(circ_list)))):
-        circ_ppm_list.append(construct_one_block(M_index, circ_list) + [circ_list[M_index][1][1]])
+        block = construct_one_block(M_index, circ_list, track_gates=track_gates)
+        # Add measurement register
+        if track_gates:
+            block.append(circ_list[M_index][1][1])
+        else:
+            block = block + [circ_list[M_index][1][1]]
+        circ_ppm_list.append(block)
 
     # Order the measurements: PPM first, SQM last
-    circ_ppm_list.sort(reverse=True)
-
-    return circ_ppr_list, circ_ppm_list
+    # Sort by starting_index (first gate index) when tracking gates
+    if track_gates:
+        circ_ppm_list.sort(key=lambda x: x[3][0] if len(x) > 3 and len(x[3]) > 0 else 0, reverse=True)
+        return circ_ppr_list, circ_ppm_list, circ_list
+    else:
+        circ_ppm_list.sort(reverse=True)
+        return circ_ppr_list, circ_ppm_list
 
 
 # Fucntion to generate PPR(pi/8)s and PPMs from T gates and Measurements, respectively 
-def construct_one_block (starting_index, circ_list):
+def construct_one_block (starting_index, circ_list, track_gates=False):
     pauli_list = ["Z"]
     qubit_list = [circ_list[starting_index][1][0]]
     sign_pos = True
+    gate_indices = [starting_index] if track_gates else []
 
-    for op in reversed(circ_list[0:starting_index]):
+    for idx, op in enumerate(reversed(circ_list[0:starting_index])):
+        gate_idx = starting_index - 1 - idx  # 元のインデックス
+        if track_gates:
+            gate_indices.append(gate_idx)
         # X, Y, Z, H, CX, S, T, Measure
         # ignore measurement now
         op_name = op[0]
@@ -670,8 +792,12 @@ def construct_one_block (starting_index, circ_list):
     pauli_list, qubit_list = zip(*sorted(zip(pauli_list, qubit_list), key = lambda x : x[1].index))
     pauli_list = list(pauli_list)
     qubit_list = list(qubit_list)
-
-    return [pauli_list, qubit_list, sign_pos]
+    
+    if track_gates:
+        gate_indices.sort()  # ゲートインデックスを昇順にソート
+        return [pauli_list, qubit_list, sign_pos, gate_indices]
+    else:
+        return [pauli_list, qubit_list, sign_pos]
 
 
 # Function to format the list of PPRs and PPMs 

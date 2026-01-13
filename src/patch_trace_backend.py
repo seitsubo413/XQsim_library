@@ -192,6 +192,94 @@ def _format_cornerbd(cornerbd_list: List[str]) -> Dict[str, str]:
     }
 
 
+def _build_gate_to_event_mapping(
+    compilation_trace: Dict[str, Any],
+    events: List[Dict[str, Any]],
+    qisa_lines: List[str],
+) -> List[Dict[str, Any]]:
+    """
+    Clifford+Tゲートとパッチイベントの対応付けを構築する。
+    
+    Args:
+        compilation_trace: gsc_compiler.compilation_trace
+        events: patch.events リスト
+        qisa_lines: compiled.qisa リスト
+    
+    Returns:
+        ゲート→イベントマッピングのリスト
+    """
+    mapping: List[Dict[str, Any]] = []
+    
+    try:
+        ppr_operations = compilation_trace.get("ppr_operations", [])
+        circ_list = compilation_trace.get("circ_list", [])
+        
+        if not ppr_operations or not circ_list:
+            return mapping
+        
+        # QISA行番号 → イベントseq番号のマップを構築
+        qisa_to_events: Dict[int, List[Dict[str, Any]]] = {}
+        for event in events:
+            qisa_idx = event.get("qisa_idx")
+            if qisa_idx is not None:
+                if qisa_idx not in qisa_to_events:
+                    qisa_to_events[qisa_idx] = []
+                qisa_to_events[qisa_idx].append(event)
+        
+        # 各PPR/PPM操作に対してゲート→イベントマッピングを構築
+        for ppr_op in ppr_operations:
+            gate_indices = ppr_op.get("source_gate_indices", [])
+            merge_info_idx = ppr_op.get("merge_info_qisa_idx")
+            split_info_idx = ppr_op.get("split_info_qisa_idx")
+            
+            # このPPR/PPMに関連するイベントを収集
+            related_events = []
+            if merge_info_idx is not None and merge_info_idx in qisa_to_events:
+                related_events.extend(qisa_to_events[merge_info_idx])
+            if split_info_idx is not None and split_info_idx in qisa_to_events:
+                related_events.extend(qisa_to_events[split_info_idx])
+            
+            # 各ゲートに対してマッピングエントリを作成
+            for gate_idx in gate_indices:
+                if gate_idx < len(circ_list):
+                    gate_info = circ_list[gate_idx]
+                    gate_name = gate_info[0] if isinstance(gate_info, list) else str(gate_info)
+                    gate_args = gate_info[1] if isinstance(gate_info, list) and len(gate_info) > 1 else []
+                    
+                    # ゲートのキュービット情報を抽出
+                    gate_qubits = []
+                    if isinstance(gate_args, (list, tuple)) and len(gate_args) > 0:
+                        if gate_name == "CX" and len(gate_args) >= 2:
+                            gate_qubits = [gate_args[0].index if hasattr(gate_args[0], 'index') else gate_args[0],
+                                          gate_args[1].index if hasattr(gate_args[1], 'index') else gate_args[1]]
+                        elif len(gate_args) >= 1:
+                            gate_qubits = [gate_args[0].index if hasattr(gate_args[0], 'index') else gate_args[0]]
+                    
+                    mapping.append({
+                        "gate_idx": gate_idx,
+                        "gate_type": gate_name.lower(),
+                        "gate_qubits": gate_qubits,
+                        "ppr_idx": ppr_op.get("ppr_idx"),
+                        "ppr_type": ppr_op.get("op_type"),
+                        "qisa_start_idx": ppr_op.get("qisa_start_idx"),
+                        "qisa_end_idx": ppr_op.get("qisa_end_idx"),
+                        "events": [
+                            {
+                                "seq": evt.get("seq"),
+                                "inst": evt.get("inst"),
+                                "qisa_idx": evt.get("qisa_idx"),
+                                "cycle": evt.get("cycle"),
+                            }
+                            for evt in related_events
+                        ],
+                    })
+    
+    except Exception as e:
+        logger.warning(f"Failed to build gate-to-event mapping: {e}")
+    
+    return mapping
+
+
 def _build_logical_qubit_mapping(
     sim: Any,
     num_qasm_qubits: int,
@@ -781,6 +869,9 @@ def trace_patches_from_qasm(
         "logical_qubit_mapping": _build_logical_qubit_mapping(
             sim, num_qasm_qubits, num_compile_qubits
         ),
+        "gate_to_event_mapping": _build_gate_to_event_mapping(
+            compiler.compilation_trace, events, qisa_lines
+        ) if hasattr(compiler, "compilation_trace") else [],
     }
 
     # 6) Cleanup artifacts unless requested otherwise
