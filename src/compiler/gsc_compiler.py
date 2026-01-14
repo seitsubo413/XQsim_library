@@ -35,6 +35,13 @@ class gsc_compiler:
         self.compile_mode = None
         isa_def_path = os.path.join(par_dir, "isa_format.json")
         self.isa_def = util.getJsonData(isa_def_path)
+        # コンパイルトレース情報を保持
+        self.compilation_trace = {
+            "circ_list": None,              # Clifford+Tゲートリスト
+            "ppr_operations": [],            # PPR操作（T由来）
+            "ppm_operations": [],            # PPM操作（Measure由来）
+            "gate_transformations": [],      # 各ゲートの変換履歴
+        }
 
     def setup(self, qc_name, compile_mode):
         self.qc_name = qc_name
@@ -74,7 +81,59 @@ class gsc_compiler:
 
         # Run the circuit translation
         clif_t_qc = decompose_qc_to_Clifford_T(qc)
-        ppr_qc = format_ppr(*decompose_Clifford_T_to_PPR(clif_t_qc))
+        
+        # 追跡モードでPPR/PPMを生成（内部情報用）
+        ppr_list_tracked, ppm_list_tracked, circ_list = decompose_Clifford_T_to_PPR(clif_t_qc, track_transformations=True)
+        
+        # compilation_trace に保存
+        self.compilation_trace["circ_list"] = circ_list
+        
+        # PPR操作を記録
+        for idx, ppr_block in enumerate(ppr_list_tracked):
+            # ppr_block = [pauli_list, qubit_list, sign_pos, transformation_log, starting_index]
+            pauli_list = ppr_block[0]
+            qubit_list = ppr_block[1]
+            sign_pos = ppr_block[2]
+            transformation_log = ppr_block[3] if len(ppr_block) > 3 else []
+            starting_index = ppr_block[4] if len(ppr_block) > 4 else None
+            
+            self.compilation_trace["ppr_operations"].append({
+                "ppr_idx": idx,
+                "op_type": "PPR",
+                "starting_gate_idx": starting_index,
+                "pauli_product": pauli_list,
+                "target_qubits": [q.index for q in qubit_list],
+                "sign_positive": sign_pos,
+                "transformation_log": transformation_log,
+            })
+            self.compilation_trace["gate_transformations"].extend(transformation_log)
+        
+        # PPM操作を記録
+        for idx, ppm_block in enumerate(ppm_list_tracked):
+            # ppm_block = [pauli_list, qubit_list, sign_pos, transformation_log, mreg, starting_index]
+            pauli_list = ppm_block[0]
+            qubit_list = ppm_block[1]
+            sign_pos = ppm_block[2]
+            transformation_log = ppm_block[3] if len(ppm_block) > 3 else []
+            mreg = ppm_block[4] if len(ppm_block) > 4 else None
+            starting_index = ppm_block[5] if len(ppm_block) > 5 else None
+            
+            op_type = "SQM" if len(pauli_list) <= 1 else "PPM"
+            
+            self.compilation_trace["ppm_operations"].append({
+                "ppm_idx": idx,
+                "op_type": op_type,
+                "starting_gate_idx": starting_index,
+                "pauli_product": pauli_list,
+                "target_qubits": [q.index for q in qubit_list],
+                "sign_positive": sign_pos,
+                "transformation_log": transformation_log,
+            })
+            self.compilation_trace["gate_transformations"].extend(transformation_log)
+        
+        # 通常モードでPPR/PPMを生成（ファイル出力用）
+        ppr_list, ppm_list = decompose_Clifford_T_to_PPR(clif_t_qc, track_transformations=False)
+        ppr_qc = format_ppr(ppr_list, ppm_list)
 
         # Write the fomatted string to the output file
         qtrp = open(self.qtrp_filepath, "w")
@@ -499,33 +558,60 @@ def parse_to_tket_format(op_list):
     return circ
 
 # Function to decompose a (Clifford+T) circuit to the sequence of PPRs and PPMs
-def decompose_Clifford_T_to_PPR (qc_clifford_T):
+def decompose_Clifford_T_to_PPR (qc_clifford_T, track_transformations=False):
     circ = qiskit_to_tk(qc_clifford_T)
     circ_list = [[com.op.get_name(), com.args] for com in list(circ)]
 
     # Build PPR(pi/8) from T gates
     circ_ppr_list = []
     for T_index in list(filter(lambda e: circ_list[e][0] == "T", range(len(circ_list)))):
-        circ_ppr_list.append(construct_one_block(T_index, circ_list))
+        block = construct_one_block(T_index, circ_list, track_transformations=track_transformations)
+        if track_transformations:
+            # block = [pauli_list, qubit_list, sign_pos, transformation_log]
+            # 起点ゲートインデックスを追加
+            block.append(T_index)
+        circ_ppr_list.append(block)
 
     # Build PPM from Measurement
     circ_ppm_list = []
     for M_index in list(filter(lambda e: circ_list[e][0] == "Measure", range(len(circ_list)))):
-        circ_ppm_list.append(construct_one_block(M_index, circ_list) + [circ_list[M_index][1][1]])
+        block = construct_one_block(M_index, circ_list, track_transformations=track_transformations)
+        if track_transformations:
+            # block = [pauli_list, qubit_list, sign_pos, transformation_log]
+            # measurement registerと起点ゲートインデックスを追加
+            block.append(circ_list[M_index][1][1])
+            block.append(M_index)
+        else:
+            block = block + [circ_list[M_index][1][1]]
+        circ_ppm_list.append(block)
 
     # Order the measurements: PPM first, SQM last
-    circ_ppm_list.sort(reverse=True)
+    if track_transformations:
+        # 起点ゲートインデックス（最後の要素）でソート
+        circ_ppm_list.sort(key=lambda x: x[-1], reverse=True)
+    else:
+        circ_ppm_list.sort(reverse=True)
 
-    return circ_ppr_list, circ_ppm_list
+    if track_transformations:
+        return circ_ppr_list, circ_ppm_list, circ_list
+    else:
+        return circ_ppr_list, circ_ppm_list
 
 
 # Fucntion to generate PPR(pi/8)s and PPMs from T gates and Measurements, respectively 
-def construct_one_block (starting_index, circ_list):
+def construct_one_block (starting_index, circ_list, track_transformations=False):
     pauli_list = ["Z"]
     qubit_list = [circ_list[starting_index][1][0]]
     sign_pos = True
-
-    for op in reversed(circ_list[0:starting_index]):
+    
+    # 変換履歴を記録（オプション）
+    transformation_log = [] if track_transformations else None
+    
+    # ゲートインデックスを逆順で追跡
+    gate_indices = list(range(starting_index - 1, -1, -1))
+    
+    for idx, op in enumerate(reversed(circ_list[0:starting_index])):
+        gate_idx = gate_indices[idx] if track_transformations else None
         # X, Y, Z, H, CX, S, T, Measure
         # ignore measurement now
         op_name = op[0]
@@ -595,11 +681,33 @@ def construct_one_block (starting_index, circ_list):
                 if (pauli_list[index] == "X" or pauli_list[index] == "Y"):
                     pauli_list.append("X")
                     qubit_list.append(op_qubit_target)
+                    # 変換履歴を記録: CNOTがパウリを伝播させた
+                    if track_transformations:
+                        transformation_log.append({
+                            "gate_idx": gate_idx,
+                            "gate": "cx",
+                            "qubits": [op_qubit_ctrl.index, op_qubit_target.index],
+                            "effect": "propagate_pauli",
+                            "source_qubit": op_qubit_ctrl.index,
+                            "target_qubit": op_qubit_target.index,
+                            "added_pauli": "X",
+                        })
             elif(op_qubit_target in qubit_list): # CNOT on target qubit = X
                 index = qubit_list.index(op_qubit_target)
                 if (pauli_list[index] == "Y" or pauli_list[index] == "Z"):   
                     pauli_list.append("Z")
                     qubit_list.append(op_qubit_ctrl)
+                    # 変換履歴を記録: CNOTがパウリを伝播させた
+                    if track_transformations:
+                        transformation_log.append({
+                            "gate_idx": gate_idx,
+                            "gate": "cx",
+                            "qubits": [op_qubit_ctrl.index, op_qubit_target.index],
+                            "effect": "propagate_pauli",
+                            "source_qubit": op_qubit_target.index,
+                            "target_qubit": op_qubit_ctrl.index,
+                            "added_pauli": "Z",
+                        })
             else:
                 pass
         else:
@@ -625,16 +733,29 @@ def construct_one_block (starting_index, circ_list):
                     # -H-PPR(X)- -> -PPR(Z)-H-
                     # -H-PPR(Y)- -> -PPR(-Y)-H-
                     # -H-PPR(Z)- -> -PPR(X)-H-
+                    pauli_before = pauli_list[index]
                     if (pauli_list[index] == "X"):
                         pauli_list[index] = "Z"
                     elif (pauli_list[index] == "Y"):
                         sign_pos = not(sign_pos)
                     elif (pauli_list[index] == "Z"):
                         pauli_list[index] = "X"
+                    # 変換履歴を記録: Hがパウリを変換した
+                    if track_transformations and pauli_before != pauli_list[index]:
+                        transformation_log.append({
+                            "gate_idx": gate_idx,
+                            "gate": "h",
+                            "qubits": [op_qubit.index],
+                            "effect": "transform_pauli",
+                            "qubit": op_qubit.index,
+                            "pauli_before": pauli_before,
+                            "pauli_after": pauli_list[index],
+                        })
                 elif (op_name == "S"):
                     # -S-PPR(X)- -> -PPR(-Y)-S-
                     # -S-PPR(Y)- -> -PPR(X)-S-
                     # -S-PPR(Z)- -> -PPR(Z)-S-
+                    pauli_before = pauli_list[index]
                     if (pauli_list[index] == "X"):
                         pauli_list[index] = "Y"
                         sign_pos = not(sign_pos)
@@ -642,6 +763,17 @@ def construct_one_block (starting_index, circ_list):
                         pauli_list[index] = "X"
                     elif (pauli_list[index] == "Z"):
                         pass
+                    # 変換履歴を記録: Sがパウリを変換した
+                    if track_transformations and pauli_before != pauli_list[index]:
+                        transformation_log.append({
+                            "gate_idx": gate_idx,
+                            "gate": "s",
+                            "qubits": [op_qubit.index],
+                            "effect": "transform_pauli",
+                            "qubit": op_qubit.index,
+                            "pauli_before": pauli_before,
+                            "pauli_after": pauli_list[index],
+                        })
                 elif (op_name == "T" or op_name == "Measure" or op_name == "Barrier"):
                     pass
                 elif (op_name == "Rx(0.5)"):
@@ -671,7 +803,10 @@ def construct_one_block (starting_index, circ_list):
     pauli_list = list(pauli_list)
     qubit_list = list(qubit_list)
 
-    return [pauli_list, qubit_list, sign_pos]
+    if track_transformations:
+        return [pauli_list, qubit_list, sign_pos, transformation_log]
+    else:
+        return [pauli_list, qubit_list, sign_pos]
 
 
 # Function to format the list of PPRs and PPMs 
