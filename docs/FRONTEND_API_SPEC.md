@@ -1,7 +1,7 @@
 # XQsim バックエンドAPI仕様書（フロントエンド開発用）
 
-**バージョン:** 0.3.0  
-**更新日:** 2025年1月6日
+**バージョン:** 0.4.0  
+**更新日:** 2026年1月14日
 
 ---
 
@@ -88,7 +88,9 @@ QASMからパッチの時系列情報を生成します。
     "meta": { ... },
     "input": { ... },
     "compiled": { ... },
-    "patch": { ... }
+    "patch": { ... },
+    "logical_qubit_mapping": [ ... ],
+    "clifford_t_execution_trace": { ... }
   }
 }
 ```
@@ -324,6 +326,143 @@ QASMからパッチの時系列情報を生成します。
 | `patch_delta` | array | 変化したパッチの新状態（差分） |
 
 > 💡 `patch_delta`には変化したパッチのみが含まれます。変化していないパッチは省略されます。
+
+---
+
+### 4.5 `result.logical_qubit_mapping` - 論理キュービットマッピング
+
+QASMの量子ビットがどのパッチに対応するかを示します。
+
+```json
+{
+  "logical_qubit_mapping": [
+    {
+      "lq_idx": 0,
+      "role": "z_ancilla",
+      "description": "Magic state ancilla (Z-type)",
+      "patch_indices": [0, 4],
+      "patch_coords": [[0, 0], [1, 0]],
+      "pchtype": "zt"
+    },
+    {
+      "lq_idx": 2,
+      "role": "data",
+      "qubit_index": 0,
+      "description": "User qubit q[0]",
+      "patch_indices": [2],
+      "patch_coords": [[0, 2]],
+      "pchtype": "m"
+    },
+    ...
+  ]
+}
+```
+
+| フィールド | 型 | 説明 |
+|------------|-----|------|
+| `lq_idx` | number | 論理キュービットインデックス |
+| `role` | string | 役割（`"z_ancilla"`, `"m_ancilla"`, `"data"`, `"padding"`） |
+| `qubit_index` | number? | `role="data"`の場合、QASMのキュービットインデックス |
+| `description` | string | 説明文 |
+| `patch_indices` | number[] | 対応するパッチのインデックス |
+| `patch_coords` | number[][] | パッチのグリッド座標 `[row, col]` |
+| `pchtype` | string | パッチタイプ |
+
+> 💡 `role="data"` かつ `qubit_index` がある場合、その論理キュービットはQASMの `q[qubit_index]` に対応します。
+
+---
+
+### 4.6 `result.clifford_t_execution_trace` - 回路実行追跡（⭐ 新機能）
+
+Clifford+T回路の各ゲートがどのように実行されたかを追跡する情報。
+
+```json
+{
+  "clifford_t_execution_trace": {
+    "gates": [
+      {
+        "gate_idx": 0,
+        "gate": "h",
+        "qubits": [[0]],
+        "execution_type": "pauli_frame",
+        "absorbed_into": [
+          {
+            "effect": "transform_pauli",
+            "pauli_before": "Z",
+            "pauli_after": "X",
+            "qubit": [0]
+          }
+        ]
+      },
+      {
+        "gate_idx": 1,
+        "gate": "cx",
+        "qubits": [[0], [1]],
+        "execution_type": "pauli_frame",
+        "absorbed_into": [
+          {
+            "effect": "propagate_pauli",
+            "source_qubit": [1],
+            "target_qubit": [0],
+            "added_pauli": "Z"
+          }
+        ]
+      },
+      {
+        "gate_idx": 2,
+        "gate": "measure",
+        "qubits": [[0]],
+        "execution_type": "ppm",
+        "cycle_start": 18,
+        "cycle_end": 5121,
+        "pauli_product": ["X", "Z"],
+        "target_qubits": [[0], [1]]
+      }
+    ],
+    "summary": {
+      "total_gates": 4,
+      "ppr_count": 0,
+      "ppm_count": 1,
+      "sqm_count": 1,
+      "pauli_frame_count": 2,
+      "all_gates_traced": true
+    }
+  }
+}
+```
+
+#### 4.6.1 ゲートの実行タイプ
+
+| `execution_type` | 説明 | パッチ操作 | サイクル情報 |
+|------------------|------|------------|--------------|
+| `ppr` | Tゲート由来の操作 | MERGE/SPLIT発生 | `cycle_start`, `cycle_end` |
+| `ppm` | 複数キュービット測定 | MERGE/SPLIT発生 | `cycle_start`, `cycle_end` |
+| `sqm` | 単一キュービット測定 | LQM_X/LQM_Z命令 | `cycle_after`, `cycle_before`（範囲） |
+| `pauli_frame` | Cliffordゲート（H, CX, S） | パウリ積に吸収 | なし |
+| `no_effect` | 影響なし | なし | なし |
+
+#### 4.6.2 Pauli Frameゲートの吸収情報
+
+| フィールド | 型 | 説明 |
+|------------|-----|------|
+| `effect` | string | `"transform_pauli"` または `"propagate_pauli"` |
+| `pauli_before` | string? | 変換前のパウリ（H, Sの場合） |
+| `pauli_after` | string? | 変換後のパウリ（H, Sの場合） |
+| `qubit` | number[]? | 対象キュービット（H, Sの場合） |
+| `source_qubit` | number[]? | パウリ伝播元（CXの場合） |
+| `target_qubit` | number[]? | パウリ伝播先（CXの場合） |
+| `added_pauli` | string? | 追加されたパウリ（CXの場合） |
+
+#### 4.6.3 summary
+
+| フィールド | 型 | 説明 |
+|------------|-----|------|
+| `total_gates` | number | 総ゲート数 |
+| `ppr_count` | number | PPR操作数（Tゲート数） |
+| `ppm_count` | number | PPM操作数（複数キュービット測定数） |
+| `sqm_count` | number | SQM操作数（単一キュービット測定数） |
+| `pauli_frame_count` | number | Pauli Frameゲート数 |
+| `all_gates_traced` | boolean | すべてのゲートが追跡されたか |
 
 ---
 

@@ -1,0 +1,86 @@
+{
+  "total_circuits": 13,
+  "success_count": 13,
+  "error_count": 0,
+  "total_elapsed_minutes": 342.54951795,
+  "results": [
+    {
+      "name": "circuit_2q_bell_state",
+      "index": 1,
+      "status": "success",
+      "elapsed_minutes": 12.710513483333333
+    },
+    {
+      "name": "circuit_2q_cnot_simple",
+      "index": 2,
+      "status": "success",
+      "elapsed_minutes": 12.669628183333334
+    },
+    {
+      "name": "circuit_2q_h_both_cnot",
+      "index": 3,
+      "status": "success",
+      "elapsed_minutes": 13.038609516666666
+    },
+    {
+      "name": "circuit_2q_x_cnot",
+      "index": 4,
+      "status": "success",
+      "elapsed_minutes": 13.020105983333334
+    },
+    {
+      "name": "circuit_2q_z_cnot",
+      "index": 5,
+      "status": "success",
+      "elapsed_minutes": 12.720920933333334
+    },
+    {
+      "name": "circuit_3q_bell_chain",
+      "index": 6,
+      "status": "success",
+      "elapsed_minutes": 12.928341216666666
+    },
+    {
+      "name": "circuit_3q_fan_out",
+      "index": 7,
+      "status": "success",
+      "elapsed_minutes": 21.37858333333333
+    },
+    {
+      "name": "circuit_3q_linear",
+      "index": 8,
+      "status": "success",
+      "elapsed_minutes": 21.406130266666665
+    },
+    {
+      "name": "circuit_4q_full_entangle",
+      "index": 9,
+      "status": "success",
+      "elapsed_minutes": 35.61616493333334
+    },
+    {
+      "name": "circuit_4q_ghz",
+      "index": 10,
+      "status": "success",
+      "elapsed_minutes": 36.86005088333333
+    },
+    {
+      "name": "circuit_4q_ring",
+      "index": 11,
+      "status": "success",
+      "elapsed_minutes": 45.817795716666666
+    },
+    {
+      "name": "circuit_5q_linear",
+      "index": 12,
+      "status": "success",
+      "elapsed_minutes": 47.127630583333335
+    },
+    {
+      "name": "circuit_6q_ladder",
+      "index": 13,
+      "status": "success",
+      "elapsed_minutes": 57.2537173
+    }
+  ]
+}

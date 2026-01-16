@@ -1,0 +1,2462 @@
+{
+  "result": {
+    "meta": {
+      "version": 3,
+      "config": "example_cmos_d5",
+      "block_type": "Distillation",
+      "code_distance": 5,
+      "patch_grid": {
+        "rows": 3,
+        "cols": 6
+      },
+      "num_patches": 18,
+      "total_cycles": 51702,
+      "elapsed_seconds": 3435.16,
+      "termination_reason": "normal",
+      "forced_terminations": [],
+      "stability_check_failures": [],
+      "warnings": [
+        "Padding applied: original 6 qubits -> 7 qubits for compilation. The last qubit (index 6) is unused."
+      ]
+    },
+    "input": {
+      "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[6];\ncreg c[6];\nh q[0];\nh q[1];\ncx q[0],q[2];\ncx q[1],q[3];\ncx q[2],q[4];\ncx q[3],q[5];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];\nmeasure q[2] -> c[2];\nmeasure q[3] -> c[3];\nmeasure q[4] -> c[4];\nmeasure q[5] -> c[5];\n",
+      "num_qasm_qubits": 6,
+      "num_compile_qubits": 7,
+      "padding_applied": true
+    },
+    "compiled": {
+      "clifford_t_qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[6];\ncreg c[6];\nh q[0];\nh q[1];\ncx q[0],q[2];\ncx q[1],q[3];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];\ncx q[2],q[4];\ncx q[3],q[5];\nmeasure q[2] -> c[2];\nmeasure q[3] -> c[3];\nmeasure q[4] -> c[4];\nmeasure q[5] -> c[5];\n",
+      "clifford_t_qasm_padded": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[7];\ncreg c[6];\nh q[0];\nh q[1];\ncx q[0],q[2];\ncx q[1],q[3];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];\ncx q[2],q[4];\ncx q[3],q[5];\nmeasure q[2] -> c[2];\nmeasure q[3] -> c[3];\nmeasure q[4] -> c[4];\nmeasure q[5] -> c[5];\n",
+      "qisa": [
+        "PREP_INFO     NA   NA    NA   NA",
+        "LQI           NA   NA    0x00 [-,-,T,T,T,T,T,T,T,-,-,-,-,-,-,-,]",
+        "RUN_ESM       NA   NA    NA   NA",
+        "MERGE_INFO    NA   NA    0x00 [I,I,I,X,I,Z,I,Z,I,I,I,I,I,I,I,I,]",
+        "INIT_INTMD    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PPM_INTERPRET +TTN 0x001 0x00 [I,I,I,X,I,Z,I,Z,I,I,I,I,I,I,I,I,]",
+        "MEAS_INTMD    NA   NA    NA   NA",
+        "SPLIT_INFO    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PREP_INFO     NA   NA    NA   NA",
+        "MERGE_INFO    NA   NA    0x00 [I,I,X,I,Z,I,Z,I,I,I,I,I,I,I,I,I,]",
+        "INIT_INTMD    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PPM_INTERPRET +TTN 0x002 0x00 [I,I,X,I,Z,I,Z,I,I,I,I,I,I,I,I,I,]",
+        "MEAS_INTMD    NA   NA    NA   NA",
+        "SPLIT_INFO    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PREP_INFO     NA   NA    NA   NA",
+        "MERGE_INFO    NA   NA    0x00 [I,I,I,X,I,Z,I,I,I,I,I,I,I,I,I,I,]",
+        "INIT_INTMD    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PPM_INTERPRET +TTN 0x003 0x00 [I,I,I,X,I,Z,I,I,I,I,I,I,I,I,I,I,]",
+        "MEAS_INTMD    NA   NA    NA   NA",
+        "SPLIT_INFO    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PREP_INFO     NA   NA    NA   NA",
+        "MERGE_INFO    NA   NA    0x00 [I,I,X,I,Z,I,I,I,I,I,I,I,I,I,I,I,]",
+        "INIT_INTMD    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "PPM_INTERPRET +TTN 0x004 0x00 [I,I,X,I,Z,I,I,I,I,I,I,I,I,I,I,I,]",
+        "MEAS_INTMD    NA   NA    NA   NA",
+        "SPLIT_INFO    NA   NA    NA   NA",
+        "RUN_ESM       NA   NA    NA   NA",
+        "LQM_X         +FTN 0x005 0x00 [-,-,-,T,-,-,-,-,-,-,-,-,-,-,-,-,]",
+        "LQM_X         +FTN 0x006 0x00 [-,-,T,-,-,-,-,-,-,-,-,-,-,-,-,-,]"
+      ],
+      "qbin_name": "api_135ef908da8a47248d5be139baa3886e_n7"
+    },
+    "patch": {
+      "initial": [
+        {
+          "pchidx": 0,
+          "row": 0,
+          "col": 0,
+          "pchtype": "zt",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 1,
+          "row": 0,
+          "col": 1,
+          "pchtype": "mt",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 2,
+          "row": 0,
+          "col": 2,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 3,
+          "row": 0,
+          "col": 3,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 4,
+          "row": 0,
+          "col": 4,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 5,
+          "row": 0,
+          "col": 5,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 6,
+          "row": 1,
+          "col": 0,
+          "pchtype": "zb",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 7,
+          "row": 1,
+          "col": 1,
+          "pchtype": "mb",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 8,
+          "row": 1,
+          "col": 2,
+          "pchtype": "aw",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 9,
+          "row": 1,
+          "col": 3,
+          "pchtype": "ac",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 10,
+          "row": 1,
+          "col": 4,
+          "pchtype": "ae",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 11,
+          "row": 1,
+          "col": 5,
+          "pchtype": "x",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 12,
+          "row": 2,
+          "col": 0,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 13,
+          "row": 2,
+          "col": 1,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 14,
+          "row": 2,
+          "col": 2,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 15,
+          "row": 2,
+          "col": 3,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 16,
+          "row": 2,
+          "col": 4,
+          "pchtype": "m",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        },
+        {
+          "pchidx": 17,
+          "row": 2,
+          "col": 5,
+          "pchtype": "i",
+          "merged": {
+            "reg": 0,
+            "mem": 0
+          },
+          "facebd": {
+            "w": "i",
+            "n": "i",
+            "e": "i",
+            "s": "i"
+          },
+          "cornerbd": {
+            "nw": "i",
+            "ne": "i",
+            "sw": "i",
+            "se": "i"
+          }
+        }
+      ],
+      "events": [
+        {
+          "seq": 0,
+          "cycle": 30,
+          "qisa_idx": 3,
+          "inst": "MERGE_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 0,
+              "row": 0,
+              "col": 0,
+              "pchtype": "zt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "c",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 2,
+              "row": 0,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 3,
+              "row": 0,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 4,
+              "row": 0,
+              "col": 4,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 6,
+              "row": 1,
+              "col": 0,
+              "pchtype": "zb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "c",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 11,
+              "row": 1,
+              "col": 5,
+              "pchtype": "x",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 14,
+              "row": 2,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 15,
+              "row": 2,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 16,
+              "row": 2,
+              "col": 4,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 1,
+          "cycle": 5121,
+          "qisa_idx": 8,
+          "inst": "SPLIT_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 8,
+              "row": 1,
+              "col": 2,
+              "pchtype": "aw",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "pp",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "ie",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 9,
+              "row": 1,
+              "col": 3,
+              "pchtype": "ac",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "pp",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 1,
+              "col": 4,
+              "pchtype": "ae",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 14,
+              "row": 2,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 15,
+              "row": 2,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 16,
+              "row": 2,
+              "col": 4,
+              "pchtype": "m",
+              "merged": {
+                "reg": 1,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 2,
+          "cycle": 10742,
+          "qisa_idx": 10,
+          "inst": "PREP_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 1,
+              "row": 0,
+              "col": 1,
+              "pchtype": "mt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "z",
+                "s": "lp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "lp",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 8,
+              "row": 1,
+              "col": 2,
+              "pchtype": "aw",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 9,
+              "row": 1,
+              "col": 3,
+              "pchtype": "ac",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 1,
+              "col": 4,
+              "pchtype": "ae",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 14,
+              "row": 2,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 15,
+              "row": 2,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 16,
+              "row": 2,
+              "col": 4,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 3,
+          "cycle": 10745,
+          "qisa_idx": 11,
+          "inst": "MERGE_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 1,
+              "row": 0,
+              "col": 1,
+              "pchtype": "mt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 4,
+          "cycle": 16463,
+          "qisa_idx": 16,
+          "inst": "SPLIT_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 2,
+              "row": 0,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 3,
+              "row": 0,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 4,
+              "row": 0,
+              "col": 4,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 8,
+              "row": 1,
+              "col": 2,
+              "pchtype": "aw",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "pp",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "ie",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 9,
+              "row": 1,
+              "col": 3,
+              "pchtype": "ac",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "pp",
+                "e": "pp",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 1,
+              "col": 4,
+              "pchtype": "ae",
+              "merged": {
+                "reg": 1,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "z",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 5,
+          "cycle": 22084,
+          "qisa_idx": 18,
+          "inst": "PREP_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 1,
+              "row": 0,
+              "col": 1,
+              "pchtype": "mt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "z",
+                "s": "lp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 2,
+              "row": 0,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 3,
+              "row": 0,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 4,
+              "row": 0,
+              "col": 4,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "lp",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 8,
+              "row": 1,
+              "col": 2,
+              "pchtype": "aw",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 9,
+              "row": 1,
+              "col": 3,
+              "pchtype": "ac",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 1,
+              "col": 4,
+              "pchtype": "ae",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 6,
+          "cycle": 22086,
+          "qisa_idx": 19,
+          "inst": "MERGE_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 1,
+              "row": 0,
+              "col": 1,
+              "pchtype": "mt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 7,
+          "cycle": 27804,
+          "qisa_idx": 24,
+          "inst": "SPLIT_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 8,
+              "row": 1,
+              "col": 2,
+              "pchtype": "aw",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "pp",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "ie",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 9,
+              "row": 1,
+              "col": 3,
+              "pchtype": "ac",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "pp",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 1,
+              "col": 4,
+              "pchtype": "ae",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "z",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 14,
+              "row": 2,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 15,
+              "row": 2,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 1,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "pp",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 8,
+          "cycle": 33426,
+          "qisa_idx": 26,
+          "inst": "PREP_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 1,
+              "row": 0,
+              "col": 1,
+              "pchtype": "mt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "z",
+                "s": "lp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "lp",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 8,
+              "row": 1,
+              "col": 2,
+              "pchtype": "aw",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 9,
+              "row": 1,
+              "col": 3,
+              "pchtype": "ac",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 1,
+              "col": 4,
+              "pchtype": "ae",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 14,
+              "row": 2,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 15,
+              "row": 2,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "x"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 9,
+          "cycle": 33428,
+          "qisa_idx": 27,
+          "inst": "MERGE_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 1,
+              "row": 0,
+              "col": 1,
+              "pchtype": "mt",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "i",
+                "n": "i",
+                "e": "i",
+                "s": "i"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 7,
+              "row": 1,
+              "col": 1,
+              "pchtype": "mb",
+              "merged": {
+                "reg": 0,
+                "mem": 0
+              },
+              "facebd": {
+                "w": "x",
+                "n": "z",
+                "e": "x",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        },
+        {
+          "seq": 10,
+          "cycle": 39146,
+          "qisa_idx": 32,
+          "inst": "SPLIT_INFO",
+          "patch_delta": [
+            {
+              "pchidx": 2,
+              "row": 0,
+              "col": 2,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 3,
+              "row": 0,
+              "col": 3,
+              "pchtype": "m",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "z",
+                "n": "x",
+                "e": "z",
+                "s": "pp"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 8,
+              "row": 1,
+              "col": 2,
+              "pchtype": "aw",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "pp",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "ie",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 9,
+              "row": 1,
+              "col": 3,
+              "pchtype": "ac",
+              "merged": {
+                "reg": 0,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "pp",
+                "e": "pp",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "z",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            },
+            {
+              "pchidx": 10,
+              "row": 1,
+              "col": 4,
+              "pchtype": "ae",
+              "merged": {
+                "reg": 1,
+                "mem": 1
+              },
+              "facebd": {
+                "w": "pp",
+                "n": "z",
+                "e": "z",
+                "s": "z"
+              },
+              "cornerbd": {
+                "nw": "i",
+                "ne": "i",
+                "sw": "i",
+                "se": "i"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "logical_qubit_mapping": [
+      {
+        "lq_idx": 0,
+        "role": "z_ancilla",
+        "description": "Magic state ancilla (Z-type)",
+        "patch_indices": [
+          0,
+          6
+        ],
+        "patch_coords": [
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "pchtype": "zt"
+      },
+      {
+        "lq_idx": 1,
+        "role": "m_ancilla",
+        "description": "Zero state ancilla (M-type)",
+        "patch_indices": [
+          1,
+          7
+        ],
+        "patch_coords": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "pchtype": "mt"
+      },
+      {
+        "lq_idx": 2,
+        "role": "data",
+        "qubit_index": 0,
+        "description": "User qubit q[0]",
+        "patch_indices": [
+          2
+        ],
+        "patch_coords": [
+          [
+            0,
+            2
+          ]
+        ],
+        "pchtype": "m"
+      },
+      {
+        "lq_idx": 3,
+        "role": "data",
+        "qubit_index": 1,
+        "description": "User qubit q[1]",
+        "patch_indices": [
+          14
+        ],
+        "patch_coords": [
+          [
+            2,
+            2
+          ]
+        ],
+        "pchtype": "m"
+      },
+      {
+        "lq_idx": 4,
+        "role": "data",
+        "qubit_index": 2,
+        "description": "User qubit q[2]",
+        "patch_indices": [
+          3
+        ],
+        "patch_coords": [
+          [
+            0,
+            3
+          ]
+        ],
+        "pchtype": "m"
+      },
+      {
+        "lq_idx": 5,
+        "role": "data",
+        "qubit_index": 3,
+        "description": "User qubit q[3]",
+        "patch_indices": [
+          15
+        ],
+        "patch_coords": [
+          [
+            2,
+            3
+          ]
+        ],
+        "pchtype": "m"
+      },
+      {
+        "lq_idx": 6,
+        "role": "data",
+        "qubit_index": 4,
+        "description": "User qubit q[4]",
+        "patch_indices": [
+          4
+        ],
+        "patch_coords": [
+          [
+            0,
+            4
+          ]
+        ],
+        "pchtype": "m"
+      },
+      {
+        "lq_idx": 7,
+        "role": "data",
+        "qubit_index": 5,
+        "description": "User qubit q[5]",
+        "patch_indices": [
+          16
+        ],
+        "patch_coords": [
+          [
+            2,
+            4
+          ]
+        ],
+        "pchtype": "m"
+      },
+      {
+        "lq_idx": 8,
+        "role": "padding",
+        "qubit_index": 6,
+        "description": "Padding qubit (unused)",
+        "patch_indices": [
+          11
+        ],
+        "patch_coords": [
+          [
+            1,
+            5
+          ]
+        ],
+        "pchtype": "x"
+      }
+    ],
+    "clifford_t_execution_trace": {
+      "gates": [
+        {
+          "gate_idx": 0,
+          "gate": "h",
+          "qubits": [
+            [
+              0
+            ]
+          ],
+          "execution_type": "pauli_frame",
+          "absorbed_into": [
+            {
+              "effect": "transform_pauli",
+              "pauli_before": "Z",
+              "pauli_after": "X",
+              "qubit": [
+                0
+              ],
+              "added_pauli": null,
+              "source_qubit": null,
+              "target_qubit": null
+            },
+            {
+              "effect": "transform_pauli",
+              "pauli_before": "Z",
+              "pauli_after": "X",
+              "qubit": [
+                0
+              ],
+              "added_pauli": null,
+              "source_qubit": null,
+              "target_qubit": null
+            },
+            {
+              "effect": "transform_pauli",
+              "pauli_before": "Z",
+              "pauli_after": "X",
+              "qubit": [
+                0
+              ],
+              "added_pauli": null,
+              "source_qubit": null,
+              "target_qubit": null
+            }
+          ]
+        },
+        {
+          "gate_idx": 1,
+          "gate": "h",
+          "qubits": [
+            [
+              1
+            ]
+          ],
+          "execution_type": "pauli_frame",
+          "absorbed_into": [
+            {
+              "effect": "transform_pauli",
+              "pauli_before": "Z",
+              "pauli_after": "X",
+              "qubit": [
+                1
+              ],
+              "added_pauli": null,
+              "source_qubit": null,
+              "target_qubit": null
+            },
+            {
+              "effect": "transform_pauli",
+              "pauli_before": "Z",
+              "pauli_after": "X",
+              "qubit": [
+                1
+              ],
+              "added_pauli": null,
+              "source_qubit": null,
+              "target_qubit": null
+            },
+            {
+              "effect": "transform_pauli",
+              "pauli_before": "Z",
+              "pauli_after": "X",
+              "qubit": [
+                1
+              ],
+              "added_pauli": null,
+              "source_qubit": null,
+              "target_qubit": null
+            }
+          ]
+        },
+        {
+          "gate_idx": 2,
+          "gate": "cx",
+          "qubits": [
+            [
+              0
+            ],
+            [
+              2
+            ]
+          ],
+          "execution_type": "pauli_frame",
+          "absorbed_into": [
+            {
+              "effect": "propagate_pauli",
+              "pauli_before": null,
+              "pauli_after": null,
+              "qubit": null,
+              "added_pauli": "Z",
+              "source_qubit": [
+                2
+              ],
+              "target_qubit": [
+                0
+              ]
+            },
+            {
+              "effect": "propagate_pauli",
+              "pauli_before": null,
+              "pauli_after": null,
+              "qubit": null,
+              "added_pauli": "Z",
+              "source_qubit": [
+                2
+              ],
+              "target_qubit": [
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "gate_idx": 3,
+          "gate": "cx",
+          "qubits": [
+            [
+              1
+            ],
+            [
+              3
+            ]
+          ],
+          "execution_type": "pauli_frame",
+          "absorbed_into": [
+            {
+              "effect": "propagate_pauli",
+              "pauli_before": null,
+              "pauli_after": null,
+              "qubit": null,
+              "added_pauli": "Z",
+              "source_qubit": [
+                3
+              ],
+              "target_qubit": [
+                1
+              ]
+            },
+            {
+              "effect": "propagate_pauli",
+              "pauli_before": null,
+              "pauli_after": null,
+              "qubit": null,
+              "added_pauli": "Z",
+              "source_qubit": [
+                3
+              ],
+              "target_qubit": [
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "gate_idx": 4,
+          "gate": "measure",
+          "qubits": [
+            [
+              0
+            ],
+            [
+              0
+            ]
+          ],
+          "execution_type": "sqm",
+          "basis": "X",
+          "cycle_after": 39146,
+          "cycle_before": 51702,
+          "pauli_product": [
+            "X"
+          ],
+          "target_qubits": [
+            [
+              0
+            ]
+          ]
+        },
+        {
+          "gate_idx": 5,
+          "gate": "measure",
+          "qubits": [
+            [
+              1
+            ],
+            [
+              1
+            ]
+          ],
+          "execution_type": "sqm",
+          "basis": "X",
+          "cycle_after": 39146,
+          "cycle_before": 51702,
+          "pauli_product": [
+            "X"
+          ],
+          "target_qubits": [
+            [
+              1
+            ]
+          ]
+        },
+        {
+          "gate_idx": 6,
+          "gate": "cx",
+          "qubits": [
+            [
+              2
+            ],
+            [
+              4
+            ]
+          ],
+          "execution_type": "pauli_frame",
+          "absorbed_into": [
+            {
+              "effect": "propagate_pauli",
+              "pauli_before": null,
+              "pauli_after": null,
+              "qubit": null,
+              "added_pauli": "Z",
+              "source_qubit": [
+                4
+              ],
+              "target_qubit": [
+                2
+              ]
+            }
+          ]
+        },
+        {
+          "gate_idx": 7,
+          "gate": "cx",
+          "qubits": [
+            [
+              3
+            ],
+            [
+              5
+            ]
+          ],
+          "execution_type": "pauli_frame",
+          "absorbed_into": [
+            {
+              "effect": "propagate_pauli",
+              "pauli_before": null,
+              "pauli_after": null,
+              "qubit": null,
+              "added_pauli": "Z",
+              "source_qubit": [
+                5
+              ],
+              "target_qubit": [
+                3
+              ]
+            }
+          ]
+        },
+        {
+          "gate_idx": 8,
+          "gate": "measure",
+          "qubits": [
+            [
+              2
+            ],
+            [
+              2
+            ]
+          ],
+          "execution_type": "ppm",
+          "cycle_start": 30,
+          "cycle_end": 5121,
+          "pauli_product": [
+            "X",
+            "Z"
+          ],
+          "target_qubits": [
+            [
+              0
+            ],
+            [
+              2
+            ]
+          ]
+        },
+        {
+          "gate_idx": 9,
+          "gate": "measure",
+          "qubits": [
+            [
+              3
+            ],
+            [
+              3
+            ]
+          ],
+          "execution_type": "ppm",
+          "cycle_start": 10745,
+          "cycle_end": 16463,
+          "pauli_product": [
+            "X",
+            "Z"
+          ],
+          "target_qubits": [
+            [
+              1
+            ],
+            [
+              3
+            ]
+          ]
+        },
+        {
+          "gate_idx": 10,
+          "gate": "measure",
+          "qubits": [
+            [
+              4
+            ],
+            [
+              4
+            ]
+          ],
+          "execution_type": "ppm",
+          "cycle_start": 22086,
+          "cycle_end": 27804,
+          "pauli_product": [
+            "X",
+            "Z",
+            "Z"
+          ],
+          "target_qubits": [
+            [
+              0
+            ],
+            [
+              2
+            ],
+            [
+              4
+            ]
+          ]
+        },
+        {
+          "gate_idx": 11,
+          "gate": "measure",
+          "qubits": [
+            [
+              5
+            ],
+            [
+              5
+            ]
+          ],
+          "execution_type": "ppm",
+          "cycle_start": 33428,
+          "cycle_end": 39146,
+          "pauli_product": [
+            "X",
+            "Z",
+            "Z"
+          ],
+          "target_qubits": [
+            [
+              1
+            ],
+            [
+              3
+            ],
+            [
+              5
+            ]
+          ]
+        }
+      ],
+      "summary": {
+        "total_gates": 12,
+        "ppr_count": 0,
+        "ppm_count": 4,
+        "sqm_count": 2,
+        "pauli_frame_count": 6,
+        "all_gates_traced": true
+      }
+    }
+  }
+}

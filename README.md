@@ -79,8 +79,9 @@ The response includes:
 - `compiled`: Compiled QISA instructions
 - `patch`: Patch state information (initial state and events)
 - `logical_qubit_mapping`: Logical qubit to patch mapping
+- `clifford_t_execution_trace`: ⭐ **NEW** - Gate execution tracing (which gates caused which patch operations)
 
-See [API Output Format](./docs/API_OUTPUT_FORMAT.md) for detailed response structure.
+See [API Specification](./docs/FRONTEND_API_SPEC.md) for detailed response structure.
 
 **Note:**
 - Processing can take several minutes to over 10 minutes depending on circuit complexity
